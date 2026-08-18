@@ -1,0 +1,206 @@
+name: zimabrain-mcp
+
+services:
+  docker-proxy:
+    image: ghcr.io/tecnativa/docker-socket-proxy:v0.4.2@sha256:1f3a6f303320723d199d2316a3e82b2e2685d86c275d5e3deeaf182573b47476
+    container_name: zimabrain-mcp-docker-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: "1"
+      IMAGES: "1"
+      INFO: "1"
+      NETWORKS: "0"
+      VOLUMES: "0"
+      EVENTS: "0"
+      POST: "0"
+      LOG_LEVEL: warning
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    read_only: true
+    tmpfs:
+      - /run:size=16m,noexec,nosuid,nodev
+      - /tmp:size=16m,noexec,nosuid,nodev
+      - /var/lib/haproxy:size=16m,noexec,nosuid,nodev
+    networks: [backend]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:2375/_ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  storage-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile.storage
+    image: local/zimabrain-storage-collector:1.0.8
+    container_name: zimabrain-storage-collector
+    restart: unless-stopped
+    environment:
+      TZ: "${TZ:-Australia/Sydney}"
+      SATA_DEVICES: ""
+      NVME_CONTROLLERS: ""
+      BTRFS_DEVICES: ""
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - type: bind
+        source: /DATA
+        target: /host/DATA
+        read_only: true
+        bind:
+          propagation: rslave
+      - type: bind
+        source: /media
+        target: /host/media
+        read_only: true
+        bind:
+          propagation: rslave
+    read_only: true
+    tmpfs: [/tmp:size=32m,noexec,nosuid,nodev]
+    cap_drop: [ALL]
+    cap_add: [SYS_RAWIO]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    networks: [backend]
+
+  network-collector:
+    build:
+      context: .
+      dockerfile: Dockerfile.network
+    image: local/zimabrain-network-collector:1.0.8
+    container_name: zimabrain-network-collector
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    environment:
+      TZ: "${TZ:-Australia/Sydney}"
+      NETWORK_COLLECTOR_SOCKET: /run/zimabrain-network/collector.sock
+      SOCKET_UID: "1000"
+      SOCKET_GID: "1000"
+      HOST_PROC: /host/proc
+      RESOLV_CONF: /host/etc/resolv.conf
+      ZFW_RULES_PATH: /host/zfw/rules.json
+      HOST_SYS: /host/sys
+      RAUC_SYSTEM_CONF: /host/etc/rauc/system.conf
+      SYSTEM_BUS_SOCKET: /run/dbus/system_bus_socket
+      PERSISTENT_JOURNAL: /host/var/log/journal
+      RUNTIME_JOURNAL: /host/run/log/journal
+    volumes:
+      - network-run:/run/zimabrain-network
+      - /proc:/host/proc:ro
+      - /etc/resolv.conf:/host/etc/resolv.conf:ro
+      - /sys:/host/sys:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /etc/rauc/system.conf:/host/etc/rauc/system.conf:ro
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro
+      - /run/log/journal:/host/run/log/journal:ro
+      - /var/log/journal:/host/var/log/journal:ro
+    read_only: true
+    tmpfs: [/tmp:size=16m,noexec,nosuid,nodev]
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, NET_RAW]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "node", "src/healthcheck.js"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  brain:
+    build:
+      context: .
+      dockerfile: Dockerfile.brain
+    image: local/zimabrain-full:1.0.8
+    container_name: zimabrain-full
+    restart: unless-stopped
+    environment:
+      TZ: "${TZ:-Australia/Sydney}"
+      ZIMABRAIN_BRIDGE_HOST: 0.0.0.0
+      ZIMABRAIN_BRIDGE_PORT: "8601"
+    volumes: [./data/brain:/data]
+    read_only: true
+    tmpfs: [/tmp:size=64m,noexec,nosuid,nodev]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: 1.5
+    networks: [backend]
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    image: local/zimabrain-mcp:1.0.8
+    container_name: zimabrain-mcp
+    restart: unless-stopped
+    depends_on:
+      docker-proxy: {condition: service_healthy}
+      storage-collector: {condition: service_healthy}
+      network-collector: {condition: service_healthy}
+      brain: {condition: service_healthy}
+    environment:
+      PORT: "8718"
+      TZ: "${TZ:-Australia/Sydney}"
+      DOCKER_API: http://docker-proxy:2375
+      HOST_ROOT: /host
+      AUDIT_PATH: /data/audit.jsonl
+      STORAGE_COLLECTOR_URL: http://storage-collector:8720
+      NETWORK_COLLECTOR_SOCKET: /run/zimabrain-network/collector.sock
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /etc/hostname:/host/etc/hostname:ro
+      - ./data:/data
+      - network-run:/run/zimabrain-network:ro
+    ports: [127.0.0.1:8790:8718]
+    read_only: true
+    tmpfs: [/tmp:size=64m,noexec,nosuid,nodev]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+    networks: [backend]
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    image: local/zimabrain-mcp-ui:1.0.8
+    container_name: zimabrain-mcp-ui
+    restart: unless-stopped
+    depends_on:
+      mcp-server: {condition: service_healthy}
+    ports: [8621:3000]
+    environment:
+      TZ: "${TZ:-Australia/Sydney}"
+      MCP_API_URL: http://mcp-server:8718
+    read_only: true
+    tmpfs: [/tmp:size=64m,noexec,nosuid,nodev]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    networks: [backend, frontend]
+
+networks:
+  backend:
+    internal: true
+  frontend:
+
+volumes:
+  network-run:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: uid=0,gid=1000,mode=2770,size=16m
