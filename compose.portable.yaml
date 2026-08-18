@@ -190,12 +190,11 @@ services:
     security_opt: [no-new-privileges:true]
     pids_limit: 128
     mem_limit: 256m
-    networks: [backend, frontend]
+    networks: [backend]
 
 networks:
   backend:
     internal: true
-  frontend:
 
 volumes:
   network-run:
