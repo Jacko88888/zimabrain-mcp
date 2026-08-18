@@ -31,6 +31,22 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 
+for required_path in \
+  /DATA \
+  /media \
+  /etc/os-release \
+  /etc/hostname \
+  /etc/machine-id \
+  /etc/rauc/system.conf \
+  /run/dbus/system_bus_socket \
+  /run/log/journal \
+  /var/log/journal; do
+  if [ ! -e "$required_path" ]; then
+    echo "ERROR: required ZimaOS evidence path is missing: $required_path" >&2
+    exit 1
+  fi
+done
+
 mkdir -p "$STAGE" "$APP_DIR" "$APP_DIR/data/brain"
 
 if command -v curl >/dev/null 2>&1; then
