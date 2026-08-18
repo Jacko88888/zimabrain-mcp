@@ -1,0 +1,344 @@
+{
+  "schema": "zimabrain-source-manifest.v1",
+  "repository": "Jacko88888/zimabrain-snapshot-lab",
+  "commit": "d1add8738146a04b42e7285965f6811467b88e47",
+  "importedAt": "2026-08-17T09:26:00Z",
+  "fileCount": 67,
+  "files": [
+    {
+      "path": "brain/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "brain/answer_builder.py",
+      "sha256": "a2abf99feb63f2746b297aeee465620a1ea13576629f907fd41c8b4adac1b481",
+      "size": 37115
+    },
+    {
+      "path": "brain/answer_modes.py",
+      "sha256": "0f70851f49e406f5d413204f9048b6a568f4cdef3988b4041045cf342e8da22c",
+      "size": 2281
+    },
+    {
+      "path": "brain/app_aliases.py",
+      "sha256": "9b24006cf64229d835f37cec13ac21e38fe5b3f60284317ae538c8da64a71fdc",
+      "size": 7236
+    },
+    {
+      "path": "brain/bind_mount_permissions.py",
+      "sha256": "62de808c54823e92ad7c6cbab41d9e398e0724819f517fb7ec1154f69b99e935",
+      "size": 23456
+    },
+    {
+      "path": "brain/guided_recovery.py",
+      "sha256": "1044264ff37d075618e672ca0691f67e53d9c7cde863fc3d660fea741464827f",
+      "size": 15299
+    },
+    {
+      "path": "brain/health_memory.py",
+      "sha256": "6da79873fe981b7a9fc50200c0f7760b94aae1b1ffdbec9cfb39412b95840548",
+      "size": 84550
+    },
+    {
+      "path": "brain/intent_policy.py",
+      "sha256": "fca2aaa25c9cc1da8bde824c372acf2022ef4d98e24240414d4e52121c6c35d0",
+      "size": 14564
+    },
+    {
+      "path": "brain/layers/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "brain/layers/app_identity_guard.py",
+      "sha256": "fec433f995c90529d27d363f885d5e4c7537c1bc308a5c05d4499ab89021457e",
+      "size": 898
+    },
+    {
+      "path": "brain/layers/app_runtime_diag.py",
+      "sha256": "e9ac5fb4a696cfa029c2c36ea43169ade2957b0fbf20d727e6f2f10cd5fb6e48",
+      "size": 7398
+    },
+    {
+      "path": "brain/layers/app_setup_playbooks.py",
+      "sha256": "258f543a79a00795de120c301fecd6e1f5788d7d61851945935774f048f47953",
+      "size": 10111
+    },
+    {
+      "path": "brain/layers/app_storage_paths.py",
+      "sha256": "769e205b3513293e85ce3b148d58f20b3bf6a6c8c2ebb6454bfea694dfd03458",
+      "size": 9340
+    },
+    {
+      "path": "brain/layers/backup_borg.py",
+      "sha256": "c6bf1d7a147151bcca8712b73ab52a2134bb385ca0249ecc1a833dfd8cb95204",
+      "size": 5812
+    },
+    {
+      "path": "brain/layers/comprehensive_health.py",
+      "sha256": "ac0c9cfad2b2f27c48069037523cc31774d98eeae506c5fca5a39be544018887",
+      "size": 19736
+    },
+    {
+      "path": "brain/layers/container_bind_mount_permissions.py",
+      "sha256": "f11a0606b7ff7e7a6bbbbb42e483dbca66b4cef331204c2f8bdecf80079d74b9",
+      "size": 13896
+    },
+    {
+      "path": "brain/layers/container_commands.py",
+      "sha256": "5e2dad5e78b3a7c3fd5ae7f22b15ade33695fe2792a3d3115c84cd48882cda57",
+      "size": 2845
+    },
+    {
+      "path": "brain/layers/containers.py",
+      "sha256": "4162a26a503cd8815fcf630f7838a66b6daa153c3aabaddb457ed0cfa7aacae5",
+      "size": 7983
+    },
+    {
+      "path": "brain/layers/custom_question.py",
+      "sha256": "6fbf7ac5f938c60993f7a1dddd89a3303963258cb72262eb4a81e9a812f351fa",
+      "size": 12647
+    },
+    {
+      "path": "brain/layers/dashboard_alerts.py",
+      "sha256": "c78488e154d7463d0bb2b9e1cb787606382d99cdd89c5821d06fefbba17c8265",
+      "size": 2201
+    },
+    {
+      "path": "brain/layers/disk_commands.py",
+      "sha256": "98d608a4e6c7078259b003d7d846b21858bf547ea325f46ac05b71511c8f59cf",
+      "size": 2682
+    },
+    {
+      "path": "brain/layers/disk_crc.py",
+      "sha256": "7d245ba020e7fa128e019a351f5b19ba79256856199e698edaa2bd860ea5e6a9",
+      "size": 3552
+    },
+    {
+      "path": "brain/layers/disk_health.py",
+      "sha256": "21d165cf70e54b7aa2774c09de3d06f5847d16aeb6f7ebcd333bb40bfe241be6",
+      "size": 3784
+    },
+    {
+      "path": "brain/layers/disk_inventory.py",
+      "sha256": "f4b94ec1da3809d6aaadead7052dc3bc4b8ec85d5ac2b4abcdbb4acb69637bd8",
+      "size": 3859
+    },
+    {
+      "path": "brain/layers/docker_bind_mounts.py",
+      "sha256": "79b38269d4d92d0e9a138f8bd586ab0a9ebb49c37e65538a66c913725fbc24a3",
+      "size": 4882
+    },
+    {
+      "path": "brain/layers/docker_daemon_diag.py",
+      "sha256": "9c592151b3b06f19a30d885e0f77a63092a8b79ec24524032bf3398bacde0901",
+      "size": 3674
+    },
+    {
+      "path": "brain/layers/failed_units.py",
+      "sha256": "af0a305973cdf0f62deb7f0b0094dcc940f4c9a1097b1105bb01c8843541fe9a",
+      "size": 15388
+    },
+    {
+      "path": "brain/layers/filesystem_usage.py",
+      "sha256": "7e49a703708f600ed032b9de258fb00b952ecdf5359370d4fb87274783eecbbd",
+      "size": 5766
+    },
+    {
+      "path": "brain/layers/forum_issue_intake.py",
+      "sha256": "42116e5cfa95bff8dbb1ef867a2303d3a5d63a6610023a4b252ed651034d5a23",
+      "size": 5603
+    },
+    {
+      "path": "brain/layers/gpu_ai_runtime.py",
+      "sha256": "e00dd4cb0b7a806f2e346018e15a298783cf90fa3ffc35dd0b50af8d6d9ab81a",
+      "size": 5068
+    },
+    {
+      "path": "brain/layers/hardware_compatibility_layer.py",
+      "sha256": "f771dad76f89ea933b8e7de79e39789fd42f1a292c9fce8d19bce48ec4897b63",
+      "size": 5439
+    },
+    {
+      "path": "brain/layers/host_hardware_metrics.py",
+      "sha256": "cb977c3b1058da61430bc79d00902b9a55587eb3a3da5c2e3e5399c52b1fb760",
+      "size": 8737
+    },
+    {
+      "path": "brain/layers/install_boot_diag.py",
+      "sha256": "51918a5d3dcd5b0bc79925592ed89e657e1a3828458509b203689bdcc3175a67",
+      "size": 2196
+    },
+    {
+      "path": "brain/layers/log_intake_diag.py",
+      "sha256": "50a08dcafedb87d7caa3e57c2c47f5b952a19afbf96e0afccfbf35814736f942",
+      "size": 1839
+    },
+    {
+      "path": "brain/layers/manual_knowledge.py",
+      "sha256": "846e49efbcf5e3b328171715c68976e740204d76eea74059bfb6466a64a6c521",
+      "size": 10782
+    },
+    {
+      "path": "brain/layers/media_app_verified_guides.py",
+      "sha256": "cd7f39b76de977d8156cc59c109dae97833ce01e41a4536d541493df17b66684",
+      "size": 53459
+    },
+    {
+      "path": "brain/layers/network_commands.py",
+      "sha256": "ce37fd947792d8414c76a9820a22e8bc358bcbea1334c1d127f4f91c780bfc6d",
+      "size": 2765
+    },
+    {
+      "path": "brain/layers/network_connectivity_diag.py",
+      "sha256": "8552f986eede0699c2c361ce842e5d21b04b04360c417fc151b1e1582feec01b",
+      "size": 14410
+    },
+    {
+      "path": "brain/layers/network_exposure.py",
+      "sha256": "47584e43f0d6260da6916f2320d1f415c146650ab63af7e819bbc30937b599bf",
+      "size": 15935
+    },
+    {
+      "path": "brain/layers/permissions_ownership_diag.py",
+      "sha256": "32963025b4d2be8ef5040e5f4c048d764d218ab1f218a2a45f913b807900e733",
+      "size": 2116
+    },
+    {
+      "path": "brain/layers/raid_add_drive_diag.py",
+      "sha256": "8352ef11b0b33dabb19c34698f38cb33fad6e4dc4e9c0aedbc2e9a57f2a69c92",
+      "size": 1920
+    },
+    {
+      "path": "brain/layers/read_only_storage_diag.py",
+      "sha256": "fdfc4bae5ff816896758a2d92a57f3bc29d3b4819295f891730801b3faad2bc7",
+      "size": 3864
+    },
+    {
+      "path": "brain/layers/repair_planner.py",
+      "sha256": "32ad2b086c88e1c7ffd045642d25aaf9b46961e0e1d4060f9d91e17e183c149a",
+      "size": 1989
+    },
+    {
+      "path": "brain/layers/report_comparison.py",
+      "sha256": "5f26e03311f2b153e6d05eb59782c01430f621dc4dd579c5d12e159e5b05866b",
+      "size": 5729
+    },
+    {
+      "path": "brain/layers/smart_health_layer.py",
+      "sha256": "3b4a8f29af55eb2944afcd83c3b252aa4cae9596dfe68fa8197ed0c4d5c7a1e6",
+      "size": 13543
+    },
+    {
+      "path": "brain/layers/smart_trend.py",
+      "sha256": "1211222b622db56e1df4e9c114491edee4ac877159512c9a556acd14087fa7e2",
+      "size": 4590
+    },
+    {
+      "path": "brain/layers/smb_shares_diag.py",
+      "sha256": "f076ce6ec4667bdb1105b98841e75efb6432b24d5b5549116c18e331fe32b13e",
+      "size": 2017
+    },
+    {
+      "path": "brain/layers/snapraid_mergerfs.py",
+      "sha256": "b861874c94816adaeb21c6aebeb697b0d932675cea05c2c88347e984c2041172",
+      "size": 1780
+    },
+    {
+      "path": "brain/layers/storage_mounts.py",
+      "sha256": "1e1e5aac944a630ab740ad5eb449eeee39b54873b52913d0c73794ee8b474e5a",
+      "size": 3517
+    },
+    {
+      "path": "brain/layers/system_commands.py",
+      "sha256": "8a2482e1181bc06acdcb877ad65b02e24ed1b128876e29e056d4deed672a6114",
+      "size": 2753
+    },
+    {
+      "path": "brain/layers/third_party_app_store_index.py",
+      "sha256": "4ba5b986bfd48099de6c2827c116ac4ccc439203cef487aa04c66099405fc941",
+      "size": 13878
+    },
+    {
+      "path": "brain/layers/trend_alerts.py",
+      "sha256": "02320b71774575a8c2c700e5fa8554df699f25d9db9a1a2a05f032a52aab9a44",
+      "size": 5594
+    },
+    {
+      "path": "brain/layers/trend_history.py",
+      "sha256": "fa18aba687cedca406113ba01e9532e95f1af8898e2fb7c5e2264d0fc5f96381",
+      "size": 20263
+    },
+    {
+      "path": "brain/layers/zimaos_regression.py",
+      "sha256": "4655701d312f84cf958adf895d34ece681c8b75d3a93d310066123a1a10d0fc2",
+      "size": 13719
+    },
+    {
+      "path": "brain/layers/zimaos_update_safety.py",
+      "sha256": "4e3b1d877f889a032ae081aa94fae830b6d9a219bb61e0623fd76e5cc93ca0d1",
+      "size": 2169
+    },
+    {
+      "path": "brain/question_memory.py",
+      "sha256": "3602ae4d18008cd9eb016fbfc3919afd805cfe23454f1a1a71af5613cd070f52",
+      "size": 11324
+    },
+    {
+      "path": "brain/rauc_diagnostics.py",
+      "sha256": "3853f7d0b677d102bc052be4f8d78d29fefcc0cf34f18d6640c22bee4b5017e2",
+      "size": 14001
+    },
+    {
+      "path": "brain/recovery_completion.py",
+      "sha256": "bf59fbc18c7531df3fc81c08112f78917e790f704b12ed1b186662543466ba1c",
+      "size": 9644
+    },
+    {
+      "path": "brain/recovery_readiness.py",
+      "sha256": "935b44e0dfc2a025cf4b943d1040550dabe62de05c64cc8239000403c4b38665",
+      "size": 32789
+    },
+    {
+      "path": "brain/render.py",
+      "sha256": "4d85818dd9193b6b985f299e6ad42bae1ea6828bf7760501b50117a5adf7ddde",
+      "size": 6003
+    },
+    {
+      "path": "brain/router.py",
+      "sha256": "3309e432fe9753d1a7c194f7e7e4e9cb01cfddad70ab0562dd226f2660d81156",
+      "size": 46050
+    },
+    {
+      "path": "brain/service_diagnostics.py",
+      "sha256": "6e05d9640677afdeac16ed8f56039a765f1a0c7fe0aff14f0a7c843ee1e1babb",
+      "size": 15192
+    },
+    {
+      "path": "brain/snapshot_executor.py",
+      "sha256": "8227821de40d4b27dc48c8d28cad149bd2fd02d0fc46c17a6c705ea5f902caf1",
+      "size": 119908
+    },
+    {
+      "path": "brain/snapshot_full.py",
+      "sha256": "e8370cce2720c78b7a9437b487d8f22d36d60e23f807c3c7968c99caa03b64f2",
+      "size": 103483
+    },
+    {
+      "path": "brain/snapshot_inventory.py",
+      "sha256": "7b3fc71405930c3464ca6cf8fab9e3227f3354244fab64ddd6e6b9a3b07608db",
+      "size": 70054
+    },
+    {
+      "path": "brain/snapshot_restore.py",
+      "sha256": "132a7137267ac10a95a799e448cdf4ef6862c3ce345a5be010f25ec8b7bd8931",
+      "size": 112289
+    },
+    {
+      "path": "flask_app.py",
+      "sha256": "44684024cd8762a7488a64bc790936edbb4ca5e9c258b0a9435ad93e76949d9d",
+      "size": 215481
+    }
+  ]
+}

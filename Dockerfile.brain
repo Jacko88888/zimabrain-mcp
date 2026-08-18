@@ -1,0 +1,32 @@
+FROM gelbuilding/zimabrain-ce:1.6.0-beta
+
+ARG ZIMABRAIN_COMMIT=d1add8738146a04b42e7285965f6811467b88e47
+
+USER root
+WORKDIR /app
+
+RUN rm -rf /app/brain /app/flask_app.py
+
+COPY brain-runtime/source/flask_app.py /app/flask_app.py
+COPY brain-runtime/source/brain /app/brain
+COPY brain-runtime/source-manifest.json /app/ZIMABRAIN_SOURCE_MANIFEST.json
+COPY brain-runtime/bridge.py /app/bridge.py
+
+RUN set -eux; \
+    python -m compileall -q /app/flask_app.py /app/brain /app/bridge.py; \
+    python -c 'import json; manifest=json.load(open("/app/ZIMABRAIN_SOURCE_MANIFEST.json")); assert manifest["commit"]=="d1add8738146a04b42e7285965f6811467b88e47"; assert manifest["fileCount"] >= 67'; \
+    python -c 'import flask_app; from brain import router, answer_builder, question_memory, health_memory; assert callable(flask_app.answer_question); assert callable(router.classify)'; \
+    printf '%s\n' "${ZIMABRAIN_COMMIT}" > /app/ZIMABRAIN_SOURCE_COMMIT
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    ZIMABRAIN_BRIDGE_HOST=0.0.0.0 \
+    ZIMABRAIN_BRIDGE_PORT=8601 \
+    ZIMABRAIN_SECRET_KEY=zb2-internal-bridge-no-browser-session
+
+EXPOSE 8601
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
+  CMD python -c 'import json,urllib.request; data=json.load(urllib.request.urlopen("http://127.0.0.1:8601/health",timeout=3)); assert data["status"]=="ok" and data["sourceCommit"]=="d1add8738146a04b42e7285965f6811467b88e47"'
+
+CMD ["python", "/app/bridge.py"]

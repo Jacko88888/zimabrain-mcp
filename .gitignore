@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Runtime state and evidence
+data/
+audit.jsonl
+question-history.jsonl
+container-health-history.json
+snapshots/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+runtime.env
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Build and editor files
+.DS_Store
+*.tar
+*.tar.gz
+*.zip
+.vscode/
+.idea/
