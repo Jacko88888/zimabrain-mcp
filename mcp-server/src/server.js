@@ -47,7 +47,7 @@ import {
 
 const port = Number.parseInt(process.env.PORT ?? "8718", 10);
 const transports = new Map();
-const SERVER_VERSION = "1.0.7";
+const SERVER_VERSION = "1.0.8";
 const containerReference = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9_.-]*$/);
 
 function toolResult(value) {
