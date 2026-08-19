@@ -11,6 +11,16 @@
         "brain/answer_builder.py",
         "brain/layers/network_exposure.py"
       ]
+    },
+    {
+      "id": "mcp-structured-comprehensive-health-v1",
+      "reason": "Prevent unavailable legacy fields from becoming findings and route whole-system attention questions through current structured MCP evidence.",
+      "files": [
+        "flask_app.py",
+        "brain/intent_policy.py",
+        "brain/router.py",
+        "brain/layers/comprehensive_health.py"
+      ]
     }
   ],
   "fileCount": 67,
@@ -52,8 +62,8 @@
     },
     {
       "path": "brain/intent_policy.py",
-      "sha256": "fca2aaa25c9cc1da8bde824c372acf2022ef4d98e24240414d4e52121c6c35d0",
-      "size": 14564
+      "sha256": "6d749a6914fafb027ef4d50bf755015e040185b030704bbb71e3c919890a344f",
+      "size": 14795
     },
     {
       "path": "brain/layers/__init__.py",
@@ -87,8 +97,8 @@
     },
     {
       "path": "brain/layers/comprehensive_health.py",
-      "sha256": "ac0c9cfad2b2f27c48069037523cc31774d98eeae506c5fca5a39be544018887",
-      "size": 19736
+      "sha256": "62876a2b297d7f39bef70adb09403433c532d238a0919b89b5f1cf870e74fca1",
+      "size": 23393
     },
     {
       "path": "brain/layers/container_bind_mount_permissions.py",
@@ -317,8 +327,8 @@
     },
     {
       "path": "brain/router.py",
-      "sha256": "3309e432fe9753d1a7c194f7e7e4e9cb01cfddad70ab0562dd226f2660d81156",
-      "size": 46050
+      "sha256": "23252bb18cf5dd54f82d5612ed20992006db4be644e92f2ee1dd2f76185b56da",
+      "size": 46086
     },
     {
       "path": "brain/service_diagnostics.py",
@@ -347,8 +357,8 @@
     },
     {
       "path": "flask_app.py",
-      "sha256": "44684024cd8762a7488a64bc790936edbb4ca5e9c258b0a9435ad93e76949d9d",
-      "size": 215481
+      "sha256": "efcc527f39b845439e09b5036836ba3f916ad88821b706d2056b178854a3612e",
+      "size": 215744
     }
   ]
 }

@@ -38,6 +38,14 @@ def classify(question):
     if {"fictional", "imaginary", "nonexistent", "madeup"} & tokens:
         return _result()
 
+    if "what needs attention" in q:
+        return _result(
+            "system", "status", "overall",
+            "comprehensive_health",
+            "comprehensive_health_question",
+            "comprehensive_health",
+        )
+
     if (
         "critical" in tokens
         and tokens & {"risk", "risks"}

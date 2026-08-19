@@ -1,3 +1,4 @@
+import json
 import os
 import re
 
@@ -73,6 +74,17 @@ def _port_counts(text):
     return counts
 
 
+def _structured_mcp(evidence):
+    raw = evidence.get("structured_mcp_evidence", "")
+    if isinstance(raw, dict):
+        return raw
+    try:
+        parsed = json.loads(str(raw or ""))
+        return parsed if isinstance(parsed, dict) else {}
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return {}
+
+
 def _timeline():
     if not os.path.exists(TREND_DB_PATH):
         return None, [], [], [], {}, {}
@@ -105,6 +117,7 @@ def _timeline():
 
 def answer(bundle, question=""):
     evidence = bundle.get("same_report_evidence", {}) or {}
+    structured = _structured_mcp(evidence)
     critical = bundle.get("critical_findings", []) or []
     normalized = bundle.get("normalized", {}) or {}
     host = host_hardware_metrics._summary(bundle)
@@ -120,6 +133,11 @@ def answer(bundle, question=""):
     ]
 
     failed_units = _failed_units(evidence.get("failed_units", ""))
+    dashboard = structured.get("dashboard") if isinstance(structured.get("dashboard"), dict) else {}
+    structured_storage = structured.get("storage") if isinstance(structured.get("storage"), dict) else {}
+    if not structured_storage and isinstance(dashboard.get("storage"), dict):
+        structured_storage = dashboard.get("storage")
+    structured_mounts = structured_storage.get("mounts") if isinstance(structured_storage.get("mounts"), list) else []
     mount_lines = _lines(evidence.get("mounts", ""))
     lsblk_lines = _lines(evidence.get("lsblk", ""))
     path_lines = _lines(evidence.get("path_state", ""))
@@ -140,12 +158,17 @@ def answer(bundle, question=""):
 
     smart_raw = str(evidence.get("smart", "") or "")
     nvme_raw = str(evidence.get("nvme_smart", "") or "")
-    smart_devices = smart_raw.count("===== SMART ")
-    nvme_devices = nvme_raw.count("===== NVME ")
+    structured_smart = structured.get("smart") if isinstance(structured.get("smart"), dict) else {}
+    structured_nvme = structured.get("nvme") if isinstance(structured.get("nvme"), dict) else {}
+    smart_items = structured_smart.get("devices") if isinstance(structured_smart.get("devices"), list) else []
+    nvme_items = structured_nvme.get("devices") if isinstance(structured_nvme.get("devices"), list) else []
+    smart_devices = len(smart_items) if smart_items else smart_raw.count("===== SMART ")
+    nvme_devices = len(nvme_items) if nvme_items else nvme_raw.count("===== NVME ")
 
     smart_failed = (
         "overall-health self-assessment test result: failed" in smart_raw.lower()
         or "smart health status: failed" in smart_raw.lower()
+        or any(item.get("status") in {"failed", "critical"} for item in smart_items)
     )
 
     nvme_critical = []
@@ -156,19 +179,44 @@ def answer(bundle, question=""):
         value = match.group(1).lower() if match else ""
         if value not in {"", "0", "0x0", "0x00", "false"}:
             nvme_critical.append(line)
+    for item in nvme_items:
+        if item.get("status") == "critical":
+            nvme_critical.append(
+                f"{item.get('device', 'NVMe device')}: status=critical"
+            )
 
     ports = _port_counts(evidence.get("port_reachability", ""))
-    zfw = str(evidence.get("zfw_status", "") or "").strip()
+    structured_ports = structured.get("ports") if isinstance(structured.get("ports"), dict) else {}
+    listeners = structured_ports.get("listeners") if isinstance(structured_ports.get("listeners"), list) else []
+    potential_listeners = [
+        item for item in listeners
+        if item.get("scope") in {"all_interfaces", "lan"}
+    ]
+    potential_unique = {
+        (item.get("port"), item.get("protocol"), item.get("process"))
+        for item in potential_listeners
+    }
+    firewall = structured.get("firewall") if isinstance(structured.get("firewall"), dict) else {}
+    zfw = str(
+        firewall.get("state")
+        or evidence.get("zfw_status", "")
+        or (dashboard.get("network") or {}).get("firewallState", "")
+    ).strip()
     audit_lines = _lines(evidence.get("auditd", ""))
     audit_state = audit_lines[0] if audit_lines else "not captured"
 
     docker_security = _lines(evidence.get("docker_security", ""))
+    scan = structured.get("scan") if isinstance(structured.get("scan"), dict) else {}
+    structured_docker_security = scan.get("dockerSecurity") if isinstance(scan.get("dockerSecurity"), dict) else {}
     privileged_count = sum(
         1 for line in docker_security if "Privileged=true" in line
     )
     docker_socket_count = sum(
         1 for line in docker_security if "DockerSock=" in line
     )
+    if structured_docker_security:
+        privileged_count = len(structured_docker_security.get("privileged") or [])
+        docker_socket_count = len(structured_docker_security.get("dockerSocket") or [])
 
     scan, timeline_actionable, historical, recovered, drift, updates = _timeline()
 
@@ -367,7 +415,7 @@ def answer(bundle, question=""):
 
     lines.append("#### Filesystems, mounts and storage")
     lines.append(f"- Filesystems/lsblk lines captured: {len(lsblk_lines)}")
-    lines.append(f"- Relevant active mount lines captured: {len(mount_lines)}")
+    lines.append(f"- Relevant active mounts captured: {len(structured_mounts) if structured_mounts else len(mount_lines)}")
     lines.append(
         f"- Writable-storage mounts unexpectedly read-only: {len(readonly_mounts)}"
     )
@@ -415,12 +463,19 @@ def answer(bundle, question=""):
     lines.append("")
 
     lines.append("#### Network exposure, Firewall and audit posture")
-    lines.append(f"- LAN-reachable published ports: {ports['lan_open']}")
-    lines.append(f"- Localhost-only or LAN-blocked ports: {ports['localhost_only']}")
-    lines.append(
-        f"- Closed or unclassified reachability rows: "
-        f"{ports['closed_or_unknown']}"
-    )
+    if structured_ports:
+        lines.append(
+            f"- Potentially LAN-accessible listening combinations: "
+            f"{len(potential_unique)} ({len(potential_listeners)} socket rows)."
+        )
+        lines.append(
+            "- LAN connection probe performed: "
+            + ("yes" if structured_ports.get("lanReachabilityMeasured") is True else "no")
+        )
+        lines.append("- Internet reachability: not measured by this evidence set.")
+    else:
+        lines.append("- Listening-port evidence: not captured.")
+        lines.append("- LAN and internet reachability: not measured.")
     lines.append(f"- Firewall/ZFW status: {zfw or 'not captured'}")
     lines.append(f"- auditd status: {audit_state}")
     lines.append(f"- Privileged containers: {privileged_count}")
@@ -525,15 +580,28 @@ def answer(bundle, question=""):
         f"{len(failed_units)} failed host unit line(s)."
     )
 
+    mcp_verification = str(evidence.get("mcp_verification", "")).upper()
+    partial = mcp_verification != "VERIFIED"
+    if any(item.get("healthVerified") is not True for item in nvme_items):
+        partial = True
+    if structured_ports and structured_ports.get("lanReachabilityMeasured") is not True:
+        partial = True
+
     return {
         "lines": lines,
         "next_step": next_step,
         "forum_summary": forum_summary,
-        "trust_state": "VERIFIED",
-        "trust_title": "✅ VERIFIED FROM CURRENT REPORT AND LOCAL HEALTH TIMELINE",
+        "trust_state": "PARTIALLY VERIFIED" if partial else "VERIFIED",
+        "trust_title": (
+            "⚠️ PARTIALLY VERIFIED FROM CURRENT MCP EVIDENCE"
+            if partial
+            else "✅ VERIFIED FROM CURRENT REPORT AND LOCAL HEALTH TIMELINE"
+        ),
         "trust_detail": (
-            "This whole-system assessment uses the current same-report host evidence "
-            "and the latest local health comparison. Missing evidence is stated as a "
-            "limitation rather than inferred."
+            "Observed findings are grounded in current MCP evidence, but one or more "
+            "whole-system domains remain incomplete or unprobed."
+            if partial
+            else "This whole-system assessment uses the current same-report host evidence "
+            "and the latest local health comparison."
         ),
     }

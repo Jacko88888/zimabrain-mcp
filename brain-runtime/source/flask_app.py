@@ -2006,6 +2006,14 @@ def evaluate_critical_same_report(evidence):
     media_paths = evidence.get("media_paths", "")
     media_lines = [x.strip() for x in mounts.splitlines() if x.strip()]
     path_lines = [x.strip() for x in media_paths.splitlines() if x.strip()]
+    media_paths_collected = bool(path_lines) and not any(
+        marker in media_paths.lower()
+        for marker in (
+            "not collected",
+            "unavailable",
+            "use structured_mcp_evidence",
+        )
+    )
     def _findmnt_value(line, key):
         match = re.search(
             rf'(?:^|\s){re.escape(key)}="([^"]*)"',
@@ -2060,7 +2068,7 @@ def evaluate_critical_same_report(evidence):
             "next": "Check the symlink target mount before diagnosing AppData, Files, or container volume issues.",
         })
 
-    if not has_data_media or not has_casa_media:
+    if media_paths_collected and (not has_data_media or not has_casa_media):
         findings.append({
             "level": "YELLOW",
             "title": "ZimaOS media mirror path missing",

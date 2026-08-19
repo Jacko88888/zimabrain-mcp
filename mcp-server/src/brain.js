@@ -155,6 +155,103 @@ export function buildNetworkExposureResult({ scan = {}, ports = {}, firewall = {
   );
 }
 
+export function buildComprehensiveHealthResult({
+  health = {},
+  failed = {},
+  dashboard = {},
+  containers = [],
+  storage = {},
+  smart = {},
+  nvme = {},
+  raid = {},
+  firewall = {},
+  ports = {},
+  interfaces = {},
+  scan = {},
+}) {
+  const unhealthy = (health.items ?? []).filter((item) =>
+    item.state === "running" && item.health === "unhealthy"
+  );
+  const failedItems = failed.items ?? failed.units ?? failed.services ?? [];
+  const findings = dashboard.findings ?? [];
+  const dashboardAttention = findings.filter((item) => item.state === "attention");
+  const nonContainerAttention = dashboardAttention.filter((item) =>
+    item.name !== "containers_healthy" && item.source !== "docker_ps"
+  );
+  const smartAttention = (smart.devices ?? []).filter((item) =>
+    ["attention", "critical", "failed"].includes(item.status)
+  );
+  const nvmeAttention = (nvme.devices ?? []).filter((item) =>
+    ["attention", "critical", "failed"].includes(item.status)
+  );
+  const securityAttention = (scan.findings ?? []).filter((item) =>
+    item.severity === "attention" && item.verified === true
+  );
+
+  const messages = [...new Set([
+    ...unhealthy.map((item) => `${item.name ?? "container"} is unhealthy`),
+    ...failedItems.map((item) => `${item.name ?? item.unit ?? "service"} is failed`),
+    ...nonContainerAttention.map((item) => item.result),
+    ...smartAttention.map((item) => `${item.device ?? "storage device"} SMART status is ${item.status}`),
+    ...nvmeAttention.map((item) => `${item.device ?? "NVMe device"} status is ${item.status}`),
+    ...(raid.status === "attention" ? ["RAID or multi-device storage requires attention"] : []),
+    ...securityAttention.map((item) => item.message),
+  ].filter(Boolean))];
+
+  const smartUnknown = (smart.devices ?? []).some((item) => !item.status || item.status === "unknown");
+  const nvmeUnverified = (nvme.devices ?? []).some((item) => item.healthVerified !== true);
+  const lanProbeMissing = ports.lanReachabilityMeasured !== true;
+  const internetProbeMissing = scan.externalReachabilityMeasured !== true;
+  const firewallNotApplied = firewall.state !== "active" || firewall.active !== true;
+  const complete = !smartUnknown && !nvmeUnverified && !lanProbeMissing
+    && !internetProbeMissing && !firewallNotApplied;
+
+  return result(
+    "comprehensive_health",
+    complete ? "VERIFIED" : "PARTIALLY VERIFIED",
+    messages.length
+      ? `${messages.length} evidence-backed attention signal(s) were observed: ${messages.join("; ")}.`
+      : "No current attention signal was observed in the collected domains. Some domains remain unverified, so this is not a guarantee that the whole system is healthy.",
+    [
+      "docker_health",
+      "zima_failed_services",
+      "dashboard_evidence",
+      "docker_ps",
+      "storage_inventory",
+      "smart_health",
+      "nvme_health",
+      "raid_health",
+      "zima_firewall_status",
+      "network_open_ports",
+      "network_interfaces",
+      "zima_security_scan",
+    ],
+    {
+      health,
+      failedServices: failed,
+      dashboard,
+      containers,
+      storage,
+      smart,
+      nvme,
+      raid,
+      firewall,
+      ports,
+      interfaces,
+      scan,
+      findings,
+      attentionMessages: messages,
+      coverage: {
+        smartComplete: !smartUnknown,
+        nvmeComplete: !nvmeUnverified,
+        lanConnectionProbePerformed: !lanProbeMissing,
+        internetReachabilityMeasured: !internetProbeMissing,
+        firewallApplied: !firewallNotApplied,
+      },
+    },
+  );
+}
+
 async function answerQuestionFallback(rawQuestion) {
   const question = normalise(rawQuestion);
   if (question.length < 3 || question.length > 500) {
@@ -221,23 +318,24 @@ async function answerQuestionFallback(rawQuestion) {
       ["docker_ps"],
       { observedContainers: containers.length, stopped });
   } else if (intent === "comprehensive_health") {
-    const [health, failed, dashboard] = await Promise.all([dockerHealth(), zimaFailedServices(), dashboardEvidence()]);
-    const unhealthy = (health.items ?? []).filter(x => x.state === "running" && x.health === "unhealthy");
-    const failedItems = failed.items ?? failed.units ?? [];
-    const findings = dashboard.findings ?? [];
-    const attention = findings.filter(x => x.state === "attention");
-    const nonContainerAttention = attention.filter(x => x.name !== "containers_healthy" && x.source !== "docker_ps");
-    const messages = [...new Set([
-      ...unhealthy.map(x => `${x.name ?? "container"} is unhealthy`),
-      ...failedItems.map(x => `${x.name ?? x.unit ?? "service"} is failed`),
-      ...nonContainerAttention.map(x => x.result),
-    ].filter(Boolean))];
-    response = result(intent, messages.length ? "VERIFIED" : "PARTIALLY VERIFIED",
-      messages.length
-        ? `${messages.length} evidence-backed attention signal(s) were observed: ${messages.join("; ")}.`
-        : "No current attention signal was observed in the available container, service and dashboard evidence. This is not a guarantee that every domain is healthy.",
-      ["docker_health", "zima_failed_services", "dashboard_evidence"],
-      { health, failedServices: failed, findings, attentionMessages: messages });
+    const [health, failed, dashboard, containers, storage, smart, nvme, raid, firewall, ports, interfaces, scan] = await Promise.all([
+      dockerHealth(),
+      zimaFailedServices(),
+      dashboardEvidence(),
+      dockerContainers(),
+      storageInventory(),
+      smartHealth(),
+      nvmeHealth(),
+      raidHealth(),
+      zimaFirewallStatus(),
+      networkOpenPorts(),
+      networkInterfaces(),
+      zimaSecurityScan(),
+    ]);
+    response = buildComprehensiveHealthResult({
+      health, failed, dashboard, containers, storage, smart, nvme, raid,
+      firewall, ports, interfaces, scan,
+    });
   } else if (intent === "backup_status") {
     const backup = await backupStatus();
     const verified = backup.state === "verified" || backup.successVerified === true;
