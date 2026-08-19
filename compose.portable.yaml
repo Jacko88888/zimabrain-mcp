@@ -35,7 +35,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.storage
-    image: local/zimabrain-storage-collector:1.0.7-portable
+    image: local/zimabrain-storage-collector:1.0.8-portable
     container_name: zimabrain-storage-collector
     restart: unless-stopped
     environment:
@@ -72,7 +72,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.network
-    image: local/zimabrain-network-collector:1.0.7-portable
+    image: local/zimabrain-network-collector:1.0.8-portable
     container_name: zimabrain-network-collector
     restart: unless-stopped
     network_mode: host
@@ -119,7 +119,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.brain
-    image: local/zimabrain-full:1.0.7-portable
+    image: local/zimabrain-full:1.0.8-portable
     container_name: zimabrain-full
     restart: unless-stopped
     environment:
@@ -141,7 +141,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mcp
-    image: local/zimabrain-mcp:1.0.7-portable
+    image: local/zimabrain-mcp:1.0.8-portable
     container_name: zimabrain-mcp
     restart: unless-stopped
     depends_on:
@@ -179,7 +179,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ui
-    image: local/zimabrain-mcp-ui:1.0.7-portable
+    image: local/zimabrain-mcp-ui:1.0.8-portable
     container_name: zimabrain-mcp-ui
     restart: unless-stopped
     depends_on:
@@ -199,7 +199,6 @@ services:
 
 networks:
   backend:
-    internal: true
 
 volumes:
   network-run:
