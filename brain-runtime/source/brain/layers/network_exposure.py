@@ -1,3 +1,156 @@
+import json
+
+
+def _structured_mcp_evidence(bundle):
+    text = bundle.get("same_report_evidence", {}).get("structured_mcp_evidence", "")
+    try:
+        value = json.loads(text)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(value, dict):
+        return None
+    required = {"ports", "firewall", "containers", "scan"}
+    return value if required.issubset(value) else None
+
+
+def _structured_network_answer(evidence):
+    ports = evidence.get("ports") if isinstance(evidence.get("ports"), dict) else {}
+    firewall = evidence.get("firewall") if isinstance(evidence.get("firewall"), dict) else {}
+    scan = evidence.get("scan") if isinstance(evidence.get("scan"), dict) else {}
+    containers = evidence.get("containers") if isinstance(evidence.get("containers"), list) else []
+    applications = evidence.get("applications") if isinstance(evidence.get("applications"), dict) else {}
+    listeners = [
+        item for item in (ports.get("listeners") or scan.get("listeners") or [])
+        if isinstance(item, dict) and item.get("scope") in {"all_interfaces", "lan"}
+    ]
+    unique = {}
+    for item in listeners:
+        key = (item.get("port"), item.get("protocol"), item.get("process") or "")
+        unique[key] = item
+
+    published = []
+    for container in containers:
+        if not isinstance(container, dict):
+            continue
+        for port in container.get("ports") or []:
+            if not isinstance(port, dict) or port.get("public") is None:
+                continue
+            host_ip = port.get("ip") or "0.0.0.0"
+            published.append({
+                "container": container.get("name") or "unknown",
+                "host_ip": host_ip,
+                "host_port": port.get("public"),
+                "container_port": port.get("private"),
+                "protocol": port.get("type") or "tcp",
+                "localhost_only": host_ip in {"127.0.0.1", "::1"},
+            })
+
+    mounts_by_container = {}
+    for app in applications.get("items") or []:
+        if not isinstance(app, dict):
+            continue
+        for container in app.get("containers") or []:
+            if isinstance(container, dict):
+                mounts_by_container[container.get("name") or "unknown"] = container.get("mounts") or []
+
+    published_names = {item["container"] for item in published}
+    data_rw_published = []
+    for name, mounts in mounts_by_container.items():
+        if name not in published_names:
+            continue
+        if any(
+            isinstance(mount, dict)
+            and mount.get("readWrite") is True
+            and (mount.get("source") == "/DATA" or str(mount.get("source") or "").startswith("/DATA/"))
+            for mount in mounts
+        ):
+            data_rw_published.append(name)
+
+    remote = sorted({
+        str(container.get("name")) for container in containers
+        if isinstance(container, dict)
+        and container.get("name")
+        and _is_remote_access_name(str(container.get("name")))
+    })
+    attention = [
+        finding for finding in (scan.get("findings") or [])
+        if isinstance(finding, dict) and finding.get("severity") == "attention"
+    ]
+    state = firewall.get("state") or "unavailable"
+    lines = [
+        "- This answer uses current structured MCP listener, firewall, Docker-port, application-mount and interface evidence.",
+        "- A listening bind is not called LAN-reachable unless a connection probe actually succeeds.",
+        "",
+        "### Listening services",
+        f"- Potentially LAN-accessible socket rows: {len(listeners)}",
+        f"- Unique port/protocol/process combinations: {len(unique)}",
+    ]
+    for item in list(unique.values())[:30]:
+        process = f" ({item.get('process')})" if item.get("process") else ""
+        lines.append(
+            f"- {item.get('port')}/{item.get('protocol')}{process}: "
+            f"bind={item.get('address') or 'unknown'} scope={item.get('scope') or 'unknown'}"
+        )
+    if len(unique) > 30:
+        lines.append(f"- Additional bounded listener entries: {len(unique) - 30}")
+    lines.extend([
+        "- These binds may be accessible from the LAN, but no LAN connection probe was collected.",
+        "- Internet reachability was not measured.",
+        "",
+        "### ZFW firewall status",
+        f"- Collector state: `{state}`",
+    ])
+    if state == "active" and firewall.get("active") is True:
+        lines.append("- Active ZFW hooks were verified in the host firewall.")
+    elif state == "configured_not_applied":
+        lines.append("- Saved enabled ZFW rules were observed, but active ZFW hooks were not found.")
+    elif state == "service_only":
+        lines.append("- The ZFW service is running, but no active ZFW hooks or saved enabled rules were observed.")
+    elif state == "not_configured":
+        lines.append("- No running ZFW service, active ZFW hooks or saved enabled rules were observed.")
+    else:
+        lines.append("- Firewall enforcement could not be verified from the collected evidence.")
+    lines.extend([
+        "",
+        "### Published Docker ports",
+        f"- Published bindings observed: {len(published)}",
+    ])
+    for item in published[:30]:
+        scope = "localhost-only" if item["localhost_only"] else "potentially LAN-accessible"
+        lines.append(
+            f"- {item['container']}: {item['host_ip']}:{item['host_port']} -> "
+            f"{item['container_port']}/{item['protocol']} ({scope})"
+        )
+    if len(published) > 30:
+        lines.append(f"- Additional published bindings: {len(published) - 30}")
+    lines.extend([
+        "",
+        "### Higher-impact exposure indicators",
+    ])
+    if data_rw_published:
+        lines.append("- Published containers with writable `/DATA` mounts: " + ", ".join(sorted(data_rw_published)))
+    else:
+        lines.append("- No published container with a writable `/DATA` mount was found in the collected application evidence.")
+    if remote:
+        lines.append("- Remote-access, tunnel or proxy container-name indicators: " + ", ".join(remote))
+    else:
+        lines.append("- No remote-access, tunnel or proxy container-name indicator was found in the collected Docker inventory.")
+    if attention:
+        for finding in attention:
+            lines.append(f"- Attention: {finding.get('message') or finding.get('code') or 'network finding'}")
+    else:
+        lines.append("- No additional attention-severity finding was emitted by the bounded security scan; this is not proof of no exposure.")
+
+    return {
+        "lines": lines,
+        "next_step": "Run an authenticated LAN-side connection check for the required services, then review every unexpected published port and confirm the active ZFW policy before changing exposure.",
+        "forum_summary": "ZimaBrain verified the listening binds and Docker-published ports present in the current MCP evidence. LAN and internet reachability were not probed, so the services are potentially accessible rather than proven reachable. Review unexpected ports and verify active ZFW enforcement.",
+        "trust_state": "PARTIALLY VERIFIED",
+        "trust_title": "⚠️ PARTIALLY VERIFIED FROM CURRENT MCP EVIDENCE",
+        "trust_detail": "Listening binds, Docker-published ports and ZFW state were observed, but LAN connection and internet reachability were not measured.",
+    }
+
+
 def _parse_docker_access(bundle):
     text = bundle.get("same_report_evidence", {}).get("docker_access", "")
     rows = []
@@ -169,6 +322,10 @@ def _parse_port_reachability(bundle):
 
 
 def answer(bundle):
+    structured = _structured_mcp_evidence(bundle)
+    if structured is not None:
+        return _structured_network_answer(structured)
+
     lines = []
 
     evidence = bundle.get("same_report_evidence", {})
@@ -309,7 +466,7 @@ def answer(bundle):
 
         lines.append("")
         lines.append("#### Reachability summary")
-        lines.append(f"- LAN reachable: {len(lan_reachable)}")
+        lines.append(f"- LAN connection probe succeeded: {len(lan_reachable)}")
         lines.append(f"- Intentional localhost-only: {len(localhost_only)}")
         lines.append(f"- Possible firewall / ZFW / VLAN / bind block: {len(possible_blocked)}")
         if other_reachability:

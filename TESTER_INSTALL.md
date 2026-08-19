@@ -1,6 +1,6 @@
 # ZimaBrain MCP portable ZimaOS tester installation
 
-This installer is intended for the two invited ZimaOS testers of ZimaBrain MCP v1.0.7.
+This installer is intended for clean-install validation of ZimaBrain MCP v1.0.8.
 
 It downloads the public release into `/DATA/AppData/zimabrain-mcp`, detects the host's supported SATA and NVMe disks, creates an exact read-only Docker device allow-list, validates the generated Compose configuration, builds the release images locally and starts the six local services.
 

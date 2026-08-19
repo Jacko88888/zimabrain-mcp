@@ -474,6 +474,9 @@ def answer_question(question, bundle, build_verifier_summary, critical_badge, se
         out.extend(layer["lines"])
         next_step = layer["next_step"]
         forum_summary = layer["forum_summary"]
+        trust_state_override = layer.get("trust_state")
+        trust_title_override = layer.get("trust_title")
+        trust_detail_override = layer.get("trust_detail")
 
     elif zimaos_regression_question:
         layer = zimaos_regression.answer(bundle, question)

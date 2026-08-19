@@ -78,7 +78,7 @@ export function parseListeningSockets(text, interfaceAddresses = {}) {
       pid,
       scope,
       locallyReachable: true,
-      lanReachable: ["all_interfaces", "lan"].includes(scope),
+      potentiallyLanAccessible: ["all_interfaces", "lan"].includes(scope),
       internetReachability: "not_verified",
     });
   }

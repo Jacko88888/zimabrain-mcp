@@ -47,7 +47,7 @@ import {
 
 const port = Number.parseInt(process.env.PORT ?? "8718", 10);
 const transports = new Map();
-const SERVER_VERSION = "1.0.7";
+const SERVER_VERSION = "1.0.8";
 const containerReference = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9_.-]*$/);
 
 function toolResult(value) {
@@ -169,7 +169,7 @@ async function serverInfo() {
       { question: "Are my disks healthy?", intent: "disk_health", source: "smart_health" },
       { question: "What needs attention?", intent: "comprehensive_health", source: "docker_health" },
       { question: "Are my backups current?", intent: "backup_status", source: "backup_status" },
-      { question: "What is exposed on the LAN?", intent: "network_exposure", source: "zima_security_scan" },
+      { question: "What is exposed on the LAN?", intent: "network_exposure", source: "network_open_ports" },
       { question: "Why is Homarr showing attention?", intent: "app_verify", source: "zima_app_verify" },
     ];
     const answers = await Promise.all(qualityCases.map((item) => answerQuestion(item.question)));
@@ -182,11 +182,36 @@ async function serverInfo() {
         evidenceAligned = firstLine.includes(String(answer.evidence?.observedDisks ?? ""));
       } else if (answer.intent === "backup_status" && answer.evidence?.backup?.state === "not_configured") {
         evidenceAligned = /not verified|not configured/i.test(firstLine);
-      } else if (answer.intent === "network_exposure" && answer.evidence?.scan?.externalReachabilityMeasured === false) {
-        const count = Number(answer.evidence?.scan?.lanReachableListeners ?? 0);
-        const reportedCount = Number.parseInt(firstLine, 10);
-        evidenceAligned = /Internet reachability was not measured/i.test(text)
-          && (count === 0 ? /No LAN-reachable/i.test(firstLine) : reportedCount === count);
+      } else if (answer.intent === "network_exposure") {
+        const expectedSources = [
+          "network_open_ports",
+          "zima_firewall_status",
+          "docker_ps",
+          "zima_apps",
+          "network_interfaces",
+          "zima_security_scan",
+        ];
+        const expectedCount = Number(answer.evidence?.uniquePotentialListeners?.length ?? 0);
+        const firewallState = String(answer.evidence?.firewall?.state ?? "");
+        const noUnsupportedReachabilityClaim = !/LAN-reachable listening socket\(s\) were verified/i.test(text)
+          && !/Internet exposure (?:was|is) verified/i.test(text);
+        const uncertaintyPreserved = expectedCount === 0
+          ? /LAN and internet reachability were not measured/i.test(text)
+          : /may be accessible from the LAN/i.test(text)
+            && /no LAN connection probe was performed/i.test(text)
+            && /Internet exposure was not measured/i.test(text);
+        const countAligned = expectedCount === 0
+          ? /No listener bound to a LAN or all-interface address/i.test(firstLine)
+          : firstLine.startsWith(`${expectedCount} unique port/service combination(s)`);
+        const firewallAligned = firewallState === "service_only"
+          ? /service is running, but no active ZFW hooks or saved enabled rules were observed/i.test(text)
+          : true;
+        evidenceAligned = expectedSources.every((source) => answer.sources.includes(source))
+          && answer.verification === "PARTIALLY VERIFIED"
+          && noUnsupportedReachabilityClaim
+          && uncertaintyPreserved
+          && countAligned
+          && firewallAligned;
       } else if (answer.intent === "comprehensive_health" && Number(answer.evidence?.health?.unhealthy ?? 0) > 0) {
         evidenceAligned = /unhealthy/i.test(firstLine);
       } else if (answer.intent === "app_verify") {

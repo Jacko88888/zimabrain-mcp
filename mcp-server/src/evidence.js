@@ -475,7 +475,7 @@ export async function dashboardEvidence() {
     status: "live",
     mode: "viewer",
     generatedAt,
-    server: { name: "zimabrain-mcp-server", version: "0.9.0", transport: "streamable-http" },
+    server: { name: "zimabrain-mcp-server", version: "1.0.8", transport: "streamable-http" },
     system,
     docker: { ...docker, observedContainers: containers.length, running, unhealthy: unhealthy.length },
     storage: { observedMounts: mounts.length, mounts, observedDisks: inventory.observedDisks, disks: inventory.disks },

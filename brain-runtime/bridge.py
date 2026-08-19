@@ -61,6 +61,61 @@ def _disks_from(value):
     return []
 
 
+def _failed_units_from(value):
+    """Return legacy failed-unit text only when structured evidence shows failures."""
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return ""
+        try:
+            return _failed_units_from(json.loads(text))
+        except (json.JSONDecodeError, TypeError):
+            lowered = text.lower()
+            if any(marker in lowered for marker in (
+                "no failed units",
+                "no failed services",
+                "reported no failed units",
+                "reported no failed services",
+            )):
+                return ""
+            return text
+
+    if isinstance(value, list):
+        rows = []
+        for item in value:
+            if isinstance(item, dict):
+                unit = item.get("unit") or item.get("name") or item.get("service")
+                state = item.get("state") or item.get("status") or "failed"
+                if unit:
+                    rows.append(f"{unit} {state}")
+            elif str(item or "").strip():
+                rows.append(str(item).strip())
+        return "\n".join(rows)
+
+    if isinstance(value, dict):
+        services = value.get("services") or value.get("items") or []
+        rendered = _failed_units_from(services)
+        if rendered:
+            return rendered
+
+        try:
+            observed = int(
+                value.get("observedFailedServices")
+                or value.get("failedCount")
+                or value.get("count")
+                or 0
+            )
+        except (TypeError, ValueError):
+            observed = 0
+
+        state = str(value.get("state") or "").strip().lower()
+        if observed <= 0 or state in {"clear", "ok", "healthy", "none"}:
+            return ""
+        return _bounded_json(value, 12000)
+
+    return ""
+
+
 def _legacy_report(payload):
     fallback = payload.get("fallback") if isinstance(payload, dict) else {}
     evidence = fallback.get("evidence") if isinstance(fallback, dict) else {}
@@ -143,34 +198,47 @@ def _same_report_evidence(payload):
         if isinstance(item, dict):
             disk_lines.append(_bounded_json(item, 4000))
 
-    unavailable = "Not collected through the legacy host-command path; use STRUCTURED_MCP_EVIDENCE."
+    firewall = evidence.get("firewall") if isinstance(evidence.get("firewall"), dict) else {}
+    reachability = evidence.get("reachability") if isinstance(evidence.get("reachability"), dict) else {}
+    failed_units = _failed_units_from(
+        evidence.get("failedServices") or evidence.get("failed_units") or ""
+    )
     return {
-        "boot_id": unavailable,
-        "failed_units": str(evidence.get("failedServices") or evidence.get("failed_units") or ""),
-        "active_services": unavailable,
-        "service_hotlist": unavailable,
-        "tailscale": unavailable,
+        "boot_id": "",
+        "failed_units": failed_units,
+        "active_services": "",
+        "service_hotlist": "",
+        "tailscale": "",
         "process_top": str(evidence.get("processes") or ""),
         "io_top": str(evidence.get("activity") or evidence.get("dockerStats") or ""),
-        "iostat_brief": unavailable,
+        "iostat_brief": "",
         "lsblk": "\n".join(disk_lines),
         "disk_identity": "\n".join(disk_lines),
         "mounts": str(evidence.get("mounts") or evidence.get("storage") or ""),
-        "media_paths": unavailable,
-        "path_state": unavailable,
+        "media_paths": "",
+        "path_state": "",
         "docker_ps": "\n".join(docker_ps),
         "docker_states": "\n".join(docker_states),
         "docker_access": compact,
         "docker_security": str(evidence.get("scan") or evidence.get("security") or ""),
-        "nvidia": unavailable,
+        "nvidia": "",
         "smart": str(evidence.get("smart") or "\n".join(disk_lines)),
         "nvme_smart": str(evidence.get("nvme") or "\n".join(disk_lines)),
-        "port_reachability": str(evidence.get("scan") or ""),
-        "zfw_status": str(evidence.get("firewall") or ""),
-        "zfw_files": unavailable,
-        "zfw_chains": str(evidence.get("firewall") or ""),
-        "auditd": unavailable,
-        "self_docker_security": unavailable,
+        "port_reachability": str(reachability or ""),
+        "zfw_status": str(firewall.get("state") or ""),
+        "zfw_files": str({
+            "savedConfigurationObserved": firewall.get("savedConfigurationObserved"),
+            "savedRules": firewall.get("savedRules"),
+            "savedPolicy": firewall.get("savedPolicy"),
+        }) if firewall else "",
+        "zfw_chains": str({
+            "active": firewall.get("active"),
+            "ipv6Active": firewall.get("ipv6Active"),
+            "ipv4Policies": firewall.get("ipv4Policies"),
+            "ipv6Policies": firewall.get("ipv6Policies"),
+        }) if firewall else "",
+        "auditd": "",
+        "self_docker_security": "",
         "ip_addr": str(evidence.get("interfaces") or ""),
         "ip_route": str(evidence.get("routes") or ""),
         "resolv": str(evidence.get("dns") or ""),
@@ -184,7 +252,7 @@ def _same_report_evidence(payload):
         "thermal_zones": str(evidence.get("sensors") or ""),
         "sensors": str(evidence.get("sensors") or ""),
         "rauc": str(evidence.get("rauc") or ""),
-        "cmdline": unavailable,
+        "cmdline": "",
         "host_date": datetime.now(timezone.utc).isoformat(),
         "mcp_verification": str(fallback.get("verification") or "NOT VERIFIED"),
         "mcp_answer": str(fallback.get("answer") or ""),

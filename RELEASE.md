@@ -1,31 +1,32 @@
-# ZimaBrain MCP v1.0.7 release record
+# ZimaBrain MCP v1.0.8 release candidate
 
-## Verified deployment
+## Release-candidate scope
 
-- Host: ZimaBoard2 test system
-- Compose file SHA-256: `f99ecd81722a7dfc720c92270ce9306f9a9cce370a44a88bcc20dcb7ca6105a9`
-- Final release snapshot: `2026-08-18T06-19-27-823Z-b0c85639`
+- Host: portable ZimaOS deployment; clean-install validation pending on ZimaBoard
+- Release-candidate Compose SHA-256: `e64fefe09bffbaef6b64c329107fc5b6b27f465b5bef48f612b786cdffc6e8b4`
 - Full Brain source commit: `d1add8738146a04b42e7285965f6811467b88e47`
-- MCP server image: `local/zimabrain-mcp-zb2:1.0.7`
-- UI image: `local/zimabrain-mcp-ui-zb2:1.0.7`
+- MCP integration patchset: `mcp-structured-network-evidence-v1`
+- MCP server image: `local/zimabrain-mcp:1.0.8-portable`
+- UI image: `local/zimabrain-mcp-ui:1.0.8-portable`
 
-## Runtime verification
+## Validation before merge
 
-- Seven Compose services present and running
-- All defined health checks healthy
-- Brain, MCP server and UI restart counts: zero
-- MCP roadmap self-check: passed
-- Six-question quality matrix: 6/6
-- Container routing check: passed
-- Disk I/O routing check: passed
-- UI download and persistence wiring: passed
+- JavaScript syntax checks
+- Installer shell syntax check
+- Compose structure and security assertions
+- Dynamic-hostname rendering test using `system.hostname`
+- Clean source download and build on ZimaBoard
+- Six containers healthy with expected port publication
+- UI, MCP health, question answering, history, downloads and audit checks
+- Network claim checks for bind scope, measured reachability, ZFW state, Docker-published ports and tunnel indicators
 
-## Evidence findings are not release failures
+The release candidate must not be merged into `main` until the clean ZimaBoard installation and runtime checks pass.
 
-At release verification the host evidence reported:
+## Portable-host fixes
 
-- Homarr unhealthy
-- Backups not configured
-- One storage-health result requiring attention
-
-These are current NAS findings correctly surfaced by ZimaBrain MCP.
+- The interface uses the hostname returned by live MCP system evidence.
+- The Compose backend permits ZimaOS to publish the UI and loopback MCP ports.
+- The installer checks available `/DATA` space before building.
+- The installer reports a usable default-route IPv4 address when available.
+- The installer mounts saved ZFW rules read-only when the file exists on the host.
+- Network answers say potentially accessible until a LAN connection probe succeeds and remain partially verified while internet reachability is unmeasured.

@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.0.8 - 2026-08-19
+
+- Detects the live ZimaOS hostname through MCP evidence and uses it throughout the UI.
+- Restores LAN port publication on ZimaOS by using a non-internal Compose bridge.
+- Adds a 6 GiB `/DATA` free-space preflight for clean source builds.
+- Prints a usable UI address using the default-route IPv4 address with safe fallbacks.
+- Aligns UI, MCP health, dashboard and image version labels at v1.0.8.
+- Replaces the single-source LAN answer with combined listener, firewall, Docker-port, application-mount, interface and security-scan evidence.
+- Distinguishes potentially LAN-accessible listening binds from connection-tested LAN reachability.
+- Corrects `service_only` to mean the ZFW service is running without verified active hooks or saved enabled rules.
+- Adds claim-level network-answer tests and full source-manifest hash verification.
+- Repairs stale release security tests that referenced removed Compose filenames.
+- Detects and mounts the optional saved ZFW rules file read-only when it exists on the target host.
+- Routes “What needs attention?” through the comprehensive evidence layer and gathers Docker, service, storage, disk-health, network and security evidence together.
+- Prevents uncollected legacy fields and clear failed-service evidence from becoming false media-path or systemd findings.
+- Marks comprehensive answers partially verified whenever required SMART/NVMe or network-reachability evidence remains unverified.
+- Supports both branch names and exact 40-character commit SHAs in the portable installer archive URL.
+
 ## v1.0.7 - 2026-08-18
 
 - Connected the full ZimaBrain engine to live MCP evidence.
