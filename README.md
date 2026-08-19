@@ -6,12 +6,14 @@ ZimaBrain MCP combines the full ZimaBrain diagnostic engine with bounded live ev
 
 ## Release
 
-- Version: **1.0.7**
-- Status: verified on ZimaBoard2
+- Version: **1.0.8 release candidate**
+- Candidate branch: [`agent/v1.0.8-portable-host-detection`](https://github.com/Jacko88888/zimabrain-mcp/tree/agent/v1.0.8-portable-host-detection)
+- Status: portable six-service deployment verified healthy on ZimaBoard; the latest comprehensive-health correction is awaiting its clean runtime retest
+- Main source status: **1.0.7 remains unmerged until the v1.0.8 runtime gate passes**
 - MCP tools: **34 read-only capabilities**
-- Services: **7**
+- Services: **6 local services**; optional Secure MCP Tunnel is separate
 - Full Brain source commit: `d1add8738146a04b42e7285965f6811467b88e47`
-- Verified release snapshot: `2026-08-18T06-19-27-823Z-b0c85639`
+- MCP integration patchsets: `mcp-structured-network-evidence-v1` and `mcp-structured-comprehensive-health-v1` (recorded with updated hashes in the source manifest)
 
 ## Architecture
 
@@ -35,7 +37,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) and [SECURITY.md](SECURITY.md).
 
 ## What it answers
 
-The verified release matrix covers:
+The release-candidate answer matrix covers:
 
 1. Physical disk inventory
 2. SMART, NVMe and RAID health
@@ -70,7 +72,7 @@ The ZimaBrain MCP interface includes:
 - Viewer-only release
 - Per-tool read boundaries
 - Restricted Docker socket proxy
-- Internal backend network
+- Project-scoped backend bridge; only the UI is LAN-published and MCP is loopback-published
 - Read-only container root filesystems where supported
 - `cap_drop: ALL` for the Brain, MCP server and UI
 - `no-new-privileges`
@@ -98,24 +100,30 @@ Copy the example environment file and set the tunnel identifier outside source c
 cp .env.example .env
 ```
 
-The canonical deployment definition is [compose.zb2-v0.10.yaml](compose.zb2-v0.10.yaml).
+The portable release definition is [compose.portable.yaml](compose.portable.yaml). The installer creates `compose.detected-devices.yaml` locally from the target host's actual SATA and NVMe devices; that generated file is not committed.
 
-Review device mappings and host paths before deployment. Storage devices and mount sources differ between systems.
+`compose.zb2-v0.10.yaml` is retained as the original ZimaBoard2 development topology and is not the portable installer target.
 
 ## Validation performed
 
-The v1.0.7 release passed:
+The v1.0.8 release candidate retains the v1.0.7 validation suite and adds portable-host and claim-level checks:
 
-- Seven-service Compose policy validation
+- Six-service portable Compose validation
 - Full Brain import and source-manifest verification
+- Per-file Full Brain source size and SHA-256 verification during image build
 - Eight answer-route evidence alignment checks
+- Claim-level network tests that prevent listening binds from being called verified LAN reachability
+- Cross-source network answers using listeners, ZFW state, Docker ports, application mounts, interfaces and the bounded security scan
+- Comprehensive-attention regression tests preventing uncollected media paths or clear systemd evidence from becoming findings
+- Partial-verification enforcement when SMART, NVMe, LAN-probe or internet-reachability evidence is incomplete
+- **37 Node tests and 16 Python/security tests passed** for the current candidate source
 - Docker, storage, network and ZimaOS tool self-checks
 - UI JavaScript syntax verification
 - Download-handler verification
 - Question-history persistence wiring
 - Security-boundary inspection
-- Image and running-container tag verification
-- Zero restart count for the Brain, MCP server and UI at release verification
+- Six v1.0.8 containers and their health checks were verified on ZimaBoard before the latest Brain-answer correction
+- A clean runtime retest of the latest candidate remains required before merging into main
 
 ## Repository layout
 
@@ -126,7 +134,8 @@ network-collector/   Network and ZimaOS evidence collector
 storage-collector/   Storage, SMART, NVMe, Btrfs and RAID evidence
 ui/runtime/          ZimaBrain MCP web interface
 Dockerfile.*         Reproducible service images
-compose.zb2-v0.10.yaml
+compose.portable.yaml
+install-zimaos.sh
 ```
 
 ## Safety
