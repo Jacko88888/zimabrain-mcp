@@ -59,7 +59,8 @@ services:
         bind:
           propagation: rslave
     read_only: true
-    tmpfs: [/tmp:size=32m,noexec,nosuid,nodev]
+    tmpfs:
+      - "/tmp:size=32m,noexec,nosuid,nodev"
     cap_drop: [ALL]
     cap_add: [SYS_RAWIO]
     security_opt: [no-new-privileges:true]
@@ -100,7 +101,8 @@ services:
       - /run/log/journal:/host/run/log/journal:ro
       - /var/log/journal:/host/var/log/journal:ro
     read_only: true
-    tmpfs: [/tmp:size=16m,noexec,nosuid,nodev]
+    tmpfs:
+      - "/tmp:size=16m,noexec,nosuid,nodev"
     cap_drop: [ALL]
     cap_add: [NET_ADMIN, NET_RAW]
     security_opt: [no-new-privileges:true]
@@ -126,7 +128,8 @@ services:
       ZIMABRAIN_BRIDGE_PORT: "8601"
     volumes: [./data/brain:/data]
     read_only: true
-    tmpfs: [/tmp:size=64m,noexec,nosuid,nodev]
+    tmpfs:
+      - "/tmp:size=64m,noexec,nosuid,nodev"
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     pids_limit: 128
@@ -163,7 +166,8 @@ services:
       - network-run:/run/zimabrain-network:ro
     ports: [127.0.0.1:8790:8718]
     read_only: true
-    tmpfs: [/tmp:size=64m,noexec,nosuid,nodev]
+    tmpfs:
+      - "/tmp:size=64m,noexec,nosuid,nodev"
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     pids_limit: 128
@@ -185,7 +189,8 @@ services:
       TZ: "${TZ:-Australia/Sydney}"
       MCP_API_URL: http://mcp-server:8718
     read_only: true
-    tmpfs: [/tmp:size=64m,noexec,nosuid,nodev]
+    tmpfs:
+      - "/tmp:size=64m,noexec,nosuid,nodev"
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     pids_limit: 128
