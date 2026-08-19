@@ -2,7 +2,8 @@
 set -eu
 
 REPOSITORY_URL="https://github.com/Jacko88888/zimabrain-mcp"
-ARCHIVE_URL="${REPOSITORY_URL}/archive/refs/heads/main.tar.gz"
+RELEASE_REF="${ZIMABRAIN_RELEASE_REF:-main}"
+ARCHIVE_URL="${REPOSITORY_URL}/archive/refs/heads/${RELEASE_REF}.tar.gz"
 APP_DIR="${ZIMABRAIN_APP_DIR:-/DATA/AppData/zimabrain-mcp}"
 ARCHIVE="/tmp/zimabrain-mcp-main.tar.gz"
 STAGE="/tmp/zimabrain-mcp-install.$$"
@@ -19,7 +20,7 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-for command_name in docker lsblk awk sed tar; do
+for command_name in docker lsblk awk sed tar df; do
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "ERROR: required command is missing: $command_name" >&2
     exit 1
@@ -49,6 +50,20 @@ done
 
 mkdir -p "$STAGE" "$APP_DIR" "$APP_DIR/data/brain"
 
+AVAILABLE_KB=$(df -Pk /DATA | awk 'NR == 2 {print $4}')
+MINIMUM_KB=6291456
+case "$AVAILABLE_KB" in
+  ''|*[!0-9]*)
+    echo "ERROR: could not determine free space under /DATA." >&2
+    exit 1
+    ;;
+esac
+if [ "$AVAILABLE_KB" -lt "$MINIMUM_KB" ]; then
+  echo "ERROR: at least 6 GiB free under /DATA is required for a clean build." >&2
+  echo "Available: $((AVAILABLE_KB / 1024)) MiB" >&2
+  exit 1
+fi
+
 if command -v curl >/dev/null 2>&1; then
   curl -fL "$ARCHIVE_URL" -o "$ARCHIVE"
 elif command -v wget >/dev/null 2>&1; then
@@ -59,7 +74,8 @@ else
 fi
 
 tar -xzf "$ARCHIVE" -C "$STAGE"
-SOURCE_DIR="$STAGE/zimabrain-mcp-main"
+set -- "$STAGE"/*
+SOURCE_DIR=$1
 if [ ! -f "$SOURCE_DIR/compose.portable.yaml" ]; then
   echo "ERROR: the downloaded release does not contain compose.portable.yaml." >&2
   exit 1
@@ -126,8 +142,24 @@ docker compose -f compose.portable.yaml -f compose.detected-devices.yaml config 
 docker compose -f compose.portable.yaml -f compose.detected-devices.yaml build --pull
 docker compose -f compose.portable.yaml -f compose.detected-devices.yaml up -d
 
+HOST_IP=""
+if command -v ip >/dev/null 2>&1; then
+  HOST_IP=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i == "src") {print $(i+1); exit}}')
+  if [ -z "$HOST_IP" ]; then
+    HOST_IP=$(ip -4 -o addr show scope global 2>/dev/null | awk '$2 !~ /^(docker0|br-|virbr|zt|tun|tailscale)/ {split($4,address,"/"); print address[1]; exit}')
+  fi
+fi
+if [ -z "$HOST_IP" ]; then
+  HOST_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+fi
+
 echo "ZimaBrain MCP installation completed."
-echo "Open: http://$(hostname -I 2>/dev/null | awk '{print $1}'):8621"
+if [ -n "$HOST_IP" ]; then
+  echo "Open: http://${HOST_IP}:8621"
+else
+  echo "Open the ZimaOS host address on TCP port 8621."
+fi
+echo "Release ref: ${RELEASE_REF}"
 echo "Detected SATA devices: ${SATA_DEVICES:-none}"
 echo "Detected NVMe controllers: ${NVME_CONTROLLERS:-none}"
 echo "Detected NVMe namespaces: ${NVME_NAMESPACES:-none}"
