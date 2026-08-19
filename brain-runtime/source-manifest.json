@@ -3,6 +3,16 @@
   "repository": "Jacko88888/zimabrain-snapshot-lab",
   "commit": "d1add8738146a04b42e7285965f6811467b88e47",
   "importedAt": "2026-08-17T09:26:00Z",
+  "integrationPatches": [
+    {
+      "id": "mcp-structured-network-evidence-v1",
+      "reason": "Prevent listening binds from being reported as verified LAN reachability and align ZFW service-only wording with structured MCP evidence.",
+      "files": [
+        "brain/answer_builder.py",
+        "brain/layers/network_exposure.py"
+      ]
+    }
+  ],
   "fileCount": 67,
   "files": [
     {
@@ -12,8 +22,8 @@
     },
     {
       "path": "brain/answer_builder.py",
-      "sha256": "a2abf99feb63f2746b297aeee465620a1ea13576629f907fd41c8b4adac1b481",
-      "size": 37115
+      "sha256": "96848f64bfae8ea2024b9e660cc73135a410754bacfc637b6b095fe8d82488d8",
+      "size": 37285
     },
     {
       "path": "brain/answer_modes.py",
@@ -197,8 +207,8 @@
     },
     {
       "path": "brain/layers/network_exposure.py",
-      "sha256": "47584e43f0d6260da6916f2320d1f415c146650ab63af7e819bbc30937b599bf",
-      "size": 15935
+      "sha256": "01db2a7b330a2b6f5c8346f8667438d2a9a45ee19026ef385037b3468b0d8b29",
+      "size": 23464
     },
     {
       "path": "brain/layers/permissions_ownership_diag.py",

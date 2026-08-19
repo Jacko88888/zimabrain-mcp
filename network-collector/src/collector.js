@@ -137,12 +137,13 @@ export async function networkOpenPorts() {
   ]);
   if (!sockets.ok) throw new Error(`ss failed: ${sockets.stderr.trim() || "unknown error"}`);
   const listeners = parseListeningSockets(sockets.stdout, addresses);
-  const lanReachable = listeners.filter((item) => item.lanReachable).length;
+  const potentiallyLanAccessible = listeners.filter((item) => item.potentiallyLanAccessible).length;
   const localhostOnly = listeners.filter((item) => item.scope === "localhost").length;
   return {
     generatedAt: new Date().toISOString(),
     observedListeners: listeners.length,
-    lanReachable,
+    potentiallyLanAccessible,
+    lanReachabilityMeasured: false,
     localhostOnly,
     externalReachabilityMeasured: false,
     externalReachability: "not_verified",
@@ -231,13 +232,13 @@ export async function securityScan() {
       message: "The observed IPv4 INPUT policy is ACCEPT and no active ZFW input chain was found.",
     });
   }
-  if (ports.lanReachable > 0) {
+  if (ports.potentiallyLanAccessible > 0) {
     findings.push({
-      code: "lan_listeners_observed",
+      code: "potential_lan_listeners_observed",
       severity: "informational",
       verified: true,
-      count: ports.lanReachable,
-      message: `${ports.lanReachable} listening socket(s) are bound to the LAN or all interfaces.`,
+      count: ports.potentiallyLanAccessible,
+      message: `${ports.potentiallyLanAccessible} listening socket(s) are bound to the LAN or all interfaces; connection reachability was not tested.`,
     });
   }
   findings.push({
@@ -251,7 +252,8 @@ export async function securityScan() {
     status: findings.some((item) => item.severity === "attention") ? "attention" : "healthy",
     attentionCount: findings.filter((item) => item.severity === "attention").length,
     observedListeners: ports.observedListeners,
-    lanReachableListeners: ports.lanReachable,
+    potentiallyLanAccessibleListeners: ports.potentiallyLanAccessible,
+    lanReachabilityMeasured: false,
     listeners: (ports.listeners ?? []).slice(0, 100),
     listenersBounded: true,
     maximumListeners: 100,

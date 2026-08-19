@@ -144,6 +144,8 @@ def _same_report_evidence(payload):
             disk_lines.append(_bounded_json(item, 4000))
 
     unavailable = "Not collected through the legacy host-command path; use STRUCTURED_MCP_EVIDENCE."
+    firewall = evidence.get("firewall") if isinstance(evidence.get("firewall"), dict) else {}
+    reachability = evidence.get("reachability") if isinstance(evidence.get("reachability"), dict) else {}
     return {
         "boot_id": unavailable,
         "failed_units": str(evidence.get("failedServices") or evidence.get("failed_units") or ""),
@@ -165,10 +167,19 @@ def _same_report_evidence(payload):
         "nvidia": unavailable,
         "smart": str(evidence.get("smart") or "\n".join(disk_lines)),
         "nvme_smart": str(evidence.get("nvme") or "\n".join(disk_lines)),
-        "port_reachability": str(evidence.get("scan") or ""),
-        "zfw_status": str(evidence.get("firewall") or ""),
-        "zfw_files": unavailable,
-        "zfw_chains": str(evidence.get("firewall") or ""),
+        "port_reachability": str(reachability or ""),
+        "zfw_status": str(firewall.get("state") or ""),
+        "zfw_files": str({
+            "savedConfigurationObserved": firewall.get("savedConfigurationObserved"),
+            "savedRules": firewall.get("savedRules"),
+            "savedPolicy": firewall.get("savedPolicy"),
+        }) if firewall else "",
+        "zfw_chains": str({
+            "active": firewall.get("active"),
+            "ipv6Active": firewall.get("ipv6Active"),
+            "ipv4Policies": firewall.get("ipv4Policies"),
+            "ipv6Policies": firewall.get("ipv6Policies"),
+        }) if firewall else "",
         "auditd": unavailable,
         "self_docker_security": unavailable,
         "ip_addr": str(evidence.get("interfaces") or ""),

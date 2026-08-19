@@ -7,6 +7,12 @@
 - Adds a 6 GiB `/DATA` free-space preflight for clean source builds.
 - Prints a usable UI address using the default-route IPv4 address with safe fallbacks.
 - Aligns UI, MCP health, dashboard and image version labels at v1.0.8.
+- Replaces the single-source LAN answer with combined listener, firewall, Docker-port, application-mount, interface and security-scan evidence.
+- Distinguishes potentially LAN-accessible listening binds from connection-tested LAN reachability.
+- Corrects `service_only` to mean the ZFW service is running without verified active hooks or saved enabled rules.
+- Adds claim-level network-answer tests and full source-manifest hash verification.
+- Repairs stale release security tests that referenced removed Compose filenames.
+- Detects and mounts the optional saved ZFW rules file read-only when it exists on the target host.
 
 ## v1.0.7 - 2026-08-18
 

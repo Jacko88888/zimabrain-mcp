@@ -1,11 +1,14 @@
 import {
   dashboardEvidence,
   dockerContainers,
+  networkInterfaces,
+  networkOpenPorts,
   smartHealth,
   nvmeHealth,
   raidHealth,
   storageInventory,
   zimaFailedServices,
+  zimaFirewallStatus,
   zimaSecurityScan,
 } from "./evidence.js";
 import { backupStatus, dockerHealth, dockerStats, zimaApps, zimaAppVerify } from "./roadmap.js";
@@ -44,6 +47,112 @@ function deviceLabel(item) {
   const name = item.name ?? item.device ?? "unknown";
   const model = String(item.model ?? "").trim();
   return model ? `${name} (${model})` : name;
+}
+
+function firewallSummary(firewall = {}) {
+  if (firewall.state === "active" && firewall.active === true) {
+    return "Active ZFW firewall hooks were verified.";
+  }
+  if (firewall.state === "configured_not_applied") {
+    return "ZFW has saved enabled rules, but active firewall hooks were not observed.";
+  }
+  if (firewall.state === "service_only") {
+    return "The ZFW service is running, but no active ZFW hooks or saved enabled rules were observed.";
+  }
+  if (firewall.state === "not_configured") {
+    return "No running ZFW service, active ZFW hooks or saved enabled rules were observed.";
+  }
+  return "ZFW firewall enforcement could not be verified from the collected evidence.";
+}
+
+function publishedDockerPorts(containers = []) {
+  return containers.flatMap((container) => (container.ports ?? [])
+    .filter((port) => Number.isInteger(port.public))
+    .map((port) => ({
+      container: container.name ?? "unknown",
+      hostIp: port.ip || "0.0.0.0",
+      hostPort: port.public,
+      containerPort: port.private,
+      protocol: port.type ?? "tcp",
+      potentiallyLanAccessible: !["127.0.0.1", "::1"].includes(port.ip),
+    })));
+}
+
+function compactNetworkApplications(applications = {}) {
+  const items = (applications.items ?? []).map((application) => ({
+    project: application.project ?? null,
+    containers: (application.containers ?? []).map((container) => ({
+      name: container.name ?? "unknown",
+      mounts: (container.mounts ?? []).map((mount) => ({
+        source: mount.source ?? null,
+        destination: mount.destination ?? null,
+        readWrite: mount.readWrite === true,
+        type: mount.type ?? null,
+      })),
+    })),
+  }));
+  return {
+    observedApplications: applications.observedApplications ?? items.length,
+    observedContainers: applications.observedContainers ?? items.reduce((count, item) => count + item.containers.length, 0),
+    bounded: applications.bounded === true,
+    maximumContainers: applications.maximumContainers ?? null,
+    items,
+  };
+}
+
+export function buildNetworkExposureResult({ scan = {}, ports = {}, firewall = {}, containers = [], applications = {}, interfaces = {} }) {
+  const listeners = (ports.listeners ?? scan.listeners ?? []).filter((item) =>
+    ["all_interfaces", "lan"].includes(item.scope)
+  );
+  const uniqueListeners = [...new Map(listeners.map((item) => [
+    `${item.port}/${item.protocol}/${item.process ?? ""}`,
+    item,
+  ])).values()];
+  const listenerSummary = uniqueListeners.slice(0, 30).map((item) =>
+    `${item.port}/${item.protocol}${item.process ? ` (${item.process})` : ""}`
+  ).join(", ");
+  const publishedPorts = publishedDockerPorts(containers);
+  const remoteAccessContainers = containers
+    .filter((container) => /(cloudflare|cloudflared|tailscale|wireguard|zerotier|nginx|traefik|caddy|proxy|tunnel)/i.test(container.name ?? ""))
+    .map((container) => container.name);
+  const attentionFindings = (scan.findings ?? []).filter((finding) => finding.severity === "attention");
+  const applicationEvidence = compactNetworkApplications(applications);
+  const firewallText = firewallSummary(firewall);
+  const verifiedConnectionProbe = ports.lanReachabilityMeasured === true;
+  const externalMeasured = scan.externalReachabilityMeasured === true;
+
+  const opening = uniqueListeners.length
+    ? `${uniqueListeners.length} unique port/service combination(s) are listening on LAN or all-interface binds (${listeners.length} socket row(s)). They may be accessible from the LAN, but no LAN connection probe was performed. ${firewallText} Internet exposure was not measured.`
+    : `No listener bound to a LAN or all-interface address was observed in the bounded socket inventory. This does not prove the host is unreachable. ${firewallText} LAN and internet reachability were not measured.`;
+
+  return result(
+    "network_exposure",
+    verifiedConnectionProbe && externalMeasured ? "VERIFIED" : "PARTIALLY VERIFIED",
+    opening,
+    ["network_open_ports", "zima_firewall_status", "docker_ps", "zima_apps", "network_interfaces", "zima_security_scan"],
+    {
+      scan,
+      ports,
+      firewall,
+      containers,
+      applications: applicationEvidence,
+      interfaces,
+      potentiallyLanAccessibleListeners: listeners,
+      uniquePotentialListeners: uniqueListeners,
+      publishedDockerPorts: publishedPorts,
+      remoteAccessContainers,
+      attentionFindings,
+      claimChecks: {
+        socketBindObserved: true,
+        lanConnectionProbePerformed: verifiedConnectionProbe,
+        internetReachabilityMeasured: externalMeasured,
+        firewallStateVerified: typeof firewall.state === "string",
+        dockerPublishedPortsCollected: true,
+        applicationMountEvidenceCollected: Array.isArray(applications.items),
+      },
+      listenerSummary,
+    },
+  );
 }
 
 async function answerQuestionFallback(rawQuestion) {
@@ -139,23 +248,15 @@ async function answerQuestionFallback(rawQuestion) {
       ["backup_status"],
       { backup });
   } else if (intent === "network_exposure") {
-    const scan = await zimaSecurityScan();
-    const listeners = (scan.listeners ?? []).filter(item => item.lanReachable);
-    const uniqueListeners = [...new Map(listeners.map(item => [
-      `${item.port}/${item.protocol}/${item.process ?? ""}`,
-      item,
-    ])).values()];
-    const listenerSummary = uniqueListeners.slice(0, 30).map(item =>
-      `${item.port}/${item.protocol}${item.process ? ` (${item.process})` : ""}`
-    ).join(", ");
-    const verifiedListenerCount = Number(scan.lanReachableListeners ?? listeners.length);
-    response = result(intent,
-      scan.externalReachabilityMeasured ? "VERIFIED" : "PARTIALLY VERIFIED",
-      verifiedListenerCount
-        ? `${verifiedListenerCount} LAN-reachable listening socket(s) were verified. The bounded unique port/service list contains ${uniqueListeners.length} entries: ${listenerSummary}${uniqueListeners.length > 30 ? ", and additional bounded results" : ""}. Internet reachability was not measured, so this does not prove internet exposure.`
-        : "No LAN-reachable listening socket was observed in the current bounded scan. Internet reachability was not measured.",
-      ["zima_security_scan"],
-      { scan, uniqueListeners });
+    const [scan, ports, firewall, containers, applications, interfaces] = await Promise.all([
+      zimaSecurityScan(),
+      networkOpenPorts(),
+      zimaFirewallStatus(),
+      dockerContainers(),
+      zimaApps(),
+      networkInterfaces(),
+    ]);
+    response = buildNetworkExposureResult({ scan, ports, firewall, containers, applications, interfaces });
   } else if (intent === "app_inventory") {
     const apps = await zimaApps();
     const count = apps.observedApplications ?? apps.items?.length ?? 0;

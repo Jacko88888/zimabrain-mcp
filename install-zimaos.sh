@@ -121,6 +121,13 @@ for controller_path in /sys/class/nvme/nvme[0-9]*; do
 "
 done
 
+NETWORK_OVERRIDE=""
+if [ -f /var/lib/casaos_data/zfw/rules.json ]; then
+  NETWORK_OVERRIDE='  network-collector:
+    volumes:
+      - /var/lib/casaos_data/zfw/rules.json:/host/zfw/rules.json:ro'
+fi
+
 if [ -z "$SATA_DEVICES$NVME_NAMESPACES" ]; then
   echo "ERROR: no supported SATA or NVMe disks were detected." >&2
   exit 1
@@ -135,6 +142,7 @@ services:
       BTRFS_DEVICES: "${BTRFS_DEVICES}"
     devices:
 ${DEVICE_LINES}
+${NETWORK_OVERRIDE}
 EOF
 
 cd "$APP_DIR"

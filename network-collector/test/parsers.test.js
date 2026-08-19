@@ -23,6 +23,9 @@ test("socket parsing classifies LAN without claiming internet exposure", () => {
   );
   assert.equal(rows[0].scope, "localhost");
   assert.equal(rows[1].scope, "all_interfaces");
+  assert.equal(rows[1].potentiallyLanAccessible, true);
+  assert.equal(rows[0].potentiallyLanAccessible, false);
+  assert.equal("lanReachable" in rows[1], false);
   assert.equal(rows[1].internetReachability, "not_verified");
 });
 
