@@ -116,7 +116,7 @@ The v1.0.8 release candidate retains the v1.0.7 validation suite and adds portab
 - Cross-source network answers using listeners, ZFW state, Docker ports, application mounts, interfaces and the bounded security scan
 - Comprehensive-attention regression tests preventing uncollected media paths or clear systemd evidence from becoming findings
 - Partial-verification enforcement when SMART, NVMe, LAN-probe or internet-reachability evidence is incomplete
-- **37 Node tests and 16 Python/security tests passed** for the current candidate source
+- **37 Node tests and 19 Python/security tests passed** for the current candidate source
 - Docker, storage, network and ZimaOS tool self-checks
 - UI JavaScript syntax verification
 - Download-handler verification

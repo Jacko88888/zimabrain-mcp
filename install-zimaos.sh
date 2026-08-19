@@ -90,6 +90,21 @@ fi
 
 cp -R "$SOURCE_DIR"/. "$APP_DIR"/
 
+HOST_TIMEZONE=""
+if [ -r /etc/timezone ]; then
+  HOST_TIMEZONE=$(sed -n '1{s/\r$//;p;}' /etc/timezone)
+fi
+if [ -z "$HOST_TIMEZONE" ] && [ -L /etc/localtime ] && command -v readlink >/dev/null 2>&1; then
+  LOCALTIME_TARGET=$(readlink /etc/localtime || true)
+  case "$LOCALTIME_TARGET" in
+    */zoneinfo/*) HOST_TIMEZONE=${LOCALTIME_TARGET#*/zoneinfo/} ;;
+  esac
+fi
+case "$HOST_TIMEZONE" in
+  ''|*[!A-Za-z0-9_+./-]*) HOST_TIMEZONE="UTC" ;;
+esac
+printf 'TZ=%s\n' "$HOST_TIMEZONE" >"$APP_DIR/.env"
+
 SATA_DEVICES=""
 NVME_NAMESPACES=""
 BTRFS_DEVICES=""
@@ -175,6 +190,7 @@ else
   echo "Open the ZimaOS host address on TCP port 8621."
 fi
 echo "Release ref: ${RELEASE_REF}"
+echo "Detected timezone: ${HOST_TIMEZONE}"
 echo "Detected SATA devices: ${SATA_DEVICES:-none}"
 echo "Detected NVMe controllers: ${NVME_CONTROLLERS:-none}"
 echo "Detected NVMe namespaces: ${NVME_NAMESPACES:-none}"

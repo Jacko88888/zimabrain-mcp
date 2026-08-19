@@ -240,6 +240,7 @@ export async function systemInfo() {
 
   return {
     hostname: hostnameText.trim(),
+    timezone: process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
     os: os.PRETTY_NAME ?? os.NAME ?? "Unknown",
     osVersion: os.VERSION_ID ?? null,
     uptimeSeconds: Math.floor(Number.parseFloat(uptimeText.split(/\s+/)[0] ?? "0")),

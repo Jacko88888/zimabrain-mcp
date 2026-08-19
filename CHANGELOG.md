@@ -17,6 +17,7 @@
 - Prevents uncollected legacy fields and clear failed-service evidence from becoming false media-path or systemd findings.
 - Marks comprehensive answers partially verified whenever required SMART/NVMe or network-reachability evidence remains unverified.
 - Supports both branch names and exact 40-character commit SHAs in the portable installer archive URL.
+- Detects the target host timezone for Compose and the UI, removes the Sydney default and replaces the developer-specific `GH` avatar with a neutral local-viewer symbol.
 
 ## v1.0.7 - 2026-08-18
 

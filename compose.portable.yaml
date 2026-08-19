@@ -39,7 +39,7 @@ services:
     container_name: zimabrain-storage-collector
     restart: unless-stopped
     environment:
-      TZ: "${TZ:-Australia/Sydney}"
+      TZ: "${TZ:-UTC}"
       SATA_DEVICES: ""
       NVME_CONTROLLERS: ""
       BTRFS_DEVICES: ""
@@ -78,7 +78,7 @@ services:
     network_mode: host
     pid: host
     environment:
-      TZ: "${TZ:-Australia/Sydney}"
+      TZ: "${TZ:-UTC}"
       NETWORK_COLLECTOR_SOCKET: /run/zimabrain-network/collector.sock
       SOCKET_UID: "1000"
       SOCKET_GID: "1000"
@@ -123,7 +123,7 @@ services:
     container_name: zimabrain-full
     restart: unless-stopped
     environment:
-      TZ: "${TZ:-Australia/Sydney}"
+      TZ: "${TZ:-UTC}"
       ZIMABRAIN_BRIDGE_HOST: 0.0.0.0
       ZIMABRAIN_BRIDGE_PORT: "8601"
     volumes: [./data/brain:/data]
@@ -151,7 +151,7 @@ services:
       brain: {condition: service_healthy}
     environment:
       PORT: "8718"
-      TZ: "${TZ:-Australia/Sydney}"
+      TZ: "${TZ:-UTC}"
       DOCKER_API: http://docker-proxy:2375
       HOST_ROOT: /host
       AUDIT_PATH: /data/audit.jsonl
@@ -186,7 +186,7 @@ services:
       mcp-server: {condition: service_healthy}
     ports: [8621:3000]
     environment:
-      TZ: "${TZ:-Australia/Sydney}"
+      TZ: "${TZ:-UTC}"
       MCP_API_URL: http://mcp-server:8718
     read_only: true
     tmpfs:
