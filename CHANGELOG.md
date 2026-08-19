@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.8 - 2026-08-19
+
+- Detects the live ZimaOS hostname through MCP evidence and uses it throughout the UI.
+- Restores LAN port publication on ZimaOS by using a non-internal Compose bridge.
+- Adds a 6 GiB `/DATA` free-space preflight for clean source builds.
+- Prints a usable UI address using the default-route IPv4 address with safe fallbacks.
+- Aligns UI, MCP health, dashboard and image version labels at v1.0.8.
+
 ## v1.0.7 - 2026-08-18
 
 - Connected the full ZimaBrain engine to live MCP evidence.
