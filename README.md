@@ -6,10 +6,10 @@ ZimaBrain MCP combines the full ZimaBrain diagnostic engine with bounded live ev
 
 ## Release
 
-- Version: **1.0.7**
-- Status: verified on ZimaBoard2
+- Version: **1.0.8 release candidate**
+- Status: clean-install validation on ZimaBoard in progress
 - MCP tools: **34 read-only capabilities**
-- Services: **7**
+- Services: **6 local services**; optional Secure MCP Tunnel is separate
 - Full Brain source commit: `d1add8738146a04b42e7285965f6811467b88e47`
 - Verified release snapshot: `2026-08-18T06-19-27-823Z-b0c85639`
 
@@ -70,7 +70,7 @@ The ZimaBrain MCP interface includes:
 - Viewer-only release
 - Per-tool read boundaries
 - Restricted Docker socket proxy
-- Internal backend network
+- Project-scoped backend bridge; only the UI is LAN-published and MCP is loopback-published
 - Read-only container root filesystems where supported
 - `cap_drop: ALL` for the Brain, MCP server and UI
 - `no-new-privileges`
@@ -104,7 +104,7 @@ Review device mappings and host paths before deployment. Storage devices and mou
 
 ## Validation performed
 
-The v1.0.7 release passed:
+The v1.0.8 release candidate retains the v1.0.7 validation suite and adds portable-host installation checks:
 
 - Seven-service Compose policy validation
 - Full Brain import and source-manifest verification
