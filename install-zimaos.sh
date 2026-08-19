@@ -3,7 +3,14 @@ set -eu
 
 REPOSITORY_URL="https://github.com/Jacko88888/zimabrain-mcp"
 RELEASE_REF="${ZIMABRAIN_RELEASE_REF:-main}"
-ARCHIVE_URL="${REPOSITORY_URL}/archive/refs/heads/${RELEASE_REF}.tar.gz"
+if [ "${#RELEASE_REF}" -eq 40 ]; then
+  case "$RELEASE_REF" in
+    *[!0-9a-fA-F]*) ARCHIVE_URL="${REPOSITORY_URL}/archive/refs/heads/${RELEASE_REF}.tar.gz" ;;
+    *) ARCHIVE_URL="${REPOSITORY_URL}/archive/${RELEASE_REF}.tar.gz" ;;
+  esac
+else
+  ARCHIVE_URL="${REPOSITORY_URL}/archive/refs/heads/${RELEASE_REF}.tar.gz"
+fi
 APP_DIR="${ZIMABRAIN_APP_DIR:-/DATA/AppData/zimabrain-mcp}"
 ARCHIVE="/tmp/zimabrain-mcp-main.tar.gz"
 STAGE="/tmp/zimabrain-mcp-install.$$"
