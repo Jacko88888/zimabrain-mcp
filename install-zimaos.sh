@@ -90,19 +90,53 @@ fi
 
 cp -R "$SOURCE_DIR"/. "$APP_DIR"/
 
-HOST_TIMEZONE=""
-if [ -r /etc/timezone ]; then
+HOST_TIMEZONE=${ZIMABRAIN_TZ:-${TZ:-}}
+if [ -n "${ZIMABRAIN_TZ:-}" ]; then
+  TIMEZONE_SOURCE="ZIMABRAIN_TZ"
+elif [ -n "${TZ:-}" ]; then
+  TIMEZONE_SOURCE="TZ environment"
+else
+  TIMEZONE_SOURCE="not detected"
+fi
+if [ -z "$HOST_TIMEZONE" ] && command -v timedatectl >/dev/null 2>&1; then
+  HOST_TIMEZONE=$(timedatectl show -p Timezone --value 2>/dev/null | sed -n '1{s/\r$//;p;}' || true)
+  TIMEZONE_SOURCE="timedatectl"
+fi
+if [ -z "$HOST_TIMEZONE" ] && [ -r /etc/timezone ]; then
   HOST_TIMEZONE=$(sed -n '1{s/\r$//;p;}' /etc/timezone)
+  TIMEZONE_SOURCE="/etc/timezone"
 fi
 if [ -z "$HOST_TIMEZONE" ] && [ -L /etc/localtime ] && command -v readlink >/dev/null 2>&1; then
   LOCALTIME_TARGET=$(readlink /etc/localtime || true)
   case "$LOCALTIME_TARGET" in
-    */zoneinfo/*) HOST_TIMEZONE=${LOCALTIME_TARGET#*/zoneinfo/} ;;
+    */zoneinfo/*)
+      HOST_TIMEZONE=${LOCALTIME_TARGET#*/zoneinfo/}
+      TIMEZONE_SOURCE="/etc/localtime symlink"
+      ;;
   esac
 fi
+if [ -z "$HOST_TIMEZONE" ] && [ -f /etc/localtime ] && [ -d /usr/share/zoneinfo ]; then
+  for ZONE_FILE in $(find /usr/share/zoneinfo -type f 2>/dev/null); do
+    case "$ZONE_FILE" in
+      */posix/*|*/right/*|*/SystemV/*|*/Etc/*|*/zone.tab|*/zone1970.tab|*/iso3166.tab|*/leapseconds|*/leap-seconds.list) continue ;;
+    esac
+    if cmp -s /etc/localtime "$ZONE_FILE"; then
+      HOST_TIMEZONE=${ZONE_FILE#/usr/share/zoneinfo/}
+      TIMEZONE_SOURCE="/etc/localtime content"
+      break
+    fi
+  done
+fi
 case "$HOST_TIMEZONE" in
-  ''|*[!A-Za-z0-9_+./-]*) HOST_TIMEZONE="UTC" ;;
+  ''|*[!A-Za-z0-9_+./-]*)
+    HOST_TIMEZONE="Etc/UTC"
+    TIMEZONE_SOURCE="safe fallback"
+    ;;
 esac
+if [ -d /usr/share/zoneinfo ] && [ ! -f "/usr/share/zoneinfo/$HOST_TIMEZONE" ]; then
+  HOST_TIMEZONE="Etc/UTC"
+  TIMEZONE_SOURCE="safe fallback"
+fi
 printf 'TZ=%s\n' "$HOST_TIMEZONE" >"$APP_DIR/.env"
 
 SATA_DEVICES=""
@@ -190,7 +224,7 @@ else
   echo "Open the ZimaOS host address on TCP port 8621."
 fi
 echo "Release ref: ${RELEASE_REF}"
-echo "Detected timezone: ${HOST_TIMEZONE}"
+echo "Detected timezone: ${HOST_TIMEZONE} (${TIMEZONE_SOURCE})"
 echo "Detected SATA devices: ${SATA_DEVICES:-none}"
 echo "Detected NVMe controllers: ${NVME_CONTROLLERS:-none}"
 echo "Detected NVMe namespaces: ${NVME_NAMESPACES:-none}"

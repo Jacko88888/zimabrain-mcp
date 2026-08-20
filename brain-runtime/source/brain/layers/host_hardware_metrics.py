@@ -17,6 +17,9 @@ def is_host_hardware_question(question):
         "memory pressure",
         "system load",
         "load average",
+        "uptime",
+        "system timezone",
+        "timezone",
         "thermal",
         "temperatures",
         "temps normal",
@@ -174,6 +177,8 @@ def _summary(bundle):
         "temp_status": _temp_status(max_temp),
         "thermal_zones": thermal.strip() or "Not captured",
         "sensors": sensors.strip() or "Not captured",
+        "uptime": str(ev.get("uptime") or "").strip() or "Not captured",
+        "timezone": str(ev.get("timezone") or "").strip() or "Not captured",
     }
 
 
@@ -183,6 +188,22 @@ def answer(question, bundle):
     memory_focus = any(
         term in q for term in ("memory", "ram", "swap")
     )
+    requested = {
+        "cpu_usage": "cpu usage" in q,
+        "memory": "memory usage" in q or "ram usage" in q,
+        "uptime": "uptime" in q,
+        "timezone": "timezone" in q,
+        "load": "load average" in q,
+    }
+    missing = [
+        name for name, wanted in requested.items()
+        if wanted and h[name] == "Not captured"
+    ]
+    verification_line = (
+        "@@VERIFY:PARTIALLY VERIFIED@@ ⚠️ PARTIALLY VERIFIED FROM SAME-REPORT HOST EVIDENCE"
+        if missing else
+        "@@VERIFY:VERIFIED@@ ✅ VERIFIED FROM SAME-REPORT HOST EVIDENCE"
+    )
 
     out = [
         "### ZimaBrain Answer",
@@ -191,7 +212,7 @@ def answer(question, bundle):
         f"### {question.strip()}",
         "",
         "#### Verification status",
-        "@@VERIFY:VERIFIED@@ ✅ VERIFIED FROM SAME-REPORT HOST EVIDENCE",
+        verification_line,
         "- This answer uses current local host evidence.",
         "- Active layer: Host Hardware Metrics Layer",
         "- Layer file: `app/brain/layers/host_hardware_metrics.py`",
@@ -201,11 +222,15 @@ def answer(question, bundle):
 
     if memory_focus:
         out.extend([
+            f"- CPU usage snapshot: {h['cpu_usage']}",
             f"- Memory pressure assessment: {h['memory_pressure']}",
             f"- Memory available: {h['memory_available']}",
             f"- Memory: {h['memory']}",
             f"- Swap: {h['swap']}",
             f"- Load average 1/5/15 min: {h['load']}",
+            f"- Uptime seconds: {h['uptime']}",
+            f"- System timezone: {h['timezone']}",
+            *([f"- Missing requested evidence: {', '.join(missing)}"] if missing else []),
             "",
             "#### Next safest step",
             "- No immediate memory action is required when availability "
@@ -235,6 +260,9 @@ def answer(question, bundle):
         f"- Memory: {h['memory']}",
         f"- Swap: {h['swap']}",
         f"- Load average 1/5/15 min: {h['load']}",
+        f"- Uptime seconds: {h['uptime']}",
+        f"- System timezone: {h['timezone']}",
+        *([f"- Missing requested evidence: {', '.join(missing)}"] if missing else []),
         "",
         "#### Temperature evidence",
     ])

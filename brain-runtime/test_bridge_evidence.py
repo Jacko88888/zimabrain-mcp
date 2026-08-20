@@ -9,6 +9,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(SOURCE))
 
 import bridge  # noqa: E402
+from brain.layers import containers as containers_layer  # noqa: E402
 
 
 class StructuredEvidenceBridgeTests(unittest.TestCase):
@@ -116,6 +117,66 @@ class StructuredEvidenceBridgeTests(unittest.TestCase):
         self.assertNotIn("ZimaOS media mirror path missing", result["answer"])
         self.assertNotIn("Failed systemd unit detected", result["answer"])
         self.assertIn("Comprehensive System Health Layer", result["answer"])
+
+    def test_system_metrics_are_rendered_for_host_layer(self):
+        same_report = bridge._same_report_evidence({
+            "fallback": {
+                "evidence": {
+                    "system": {
+                        "cpuModel": "Example CPU",
+                        "cpuCount": 4,
+                        "cpuUsagePercent": 22.5,
+                        "totalMemoryBytes": 8 * 1024 * 1024 * 1024,
+                        "availableMemoryBytes": 5 * 1024 * 1024 * 1024,
+                        "usedMemoryBytes": 3 * 1024 * 1024 * 1024,
+                        "swapTotalBytes": 1024 * 1024 * 1024,
+                        "swapUsedBytes": 256 * 1024 * 1024,
+                        "loadAverage": [0.1, 0.2, 0.3],
+                        "uptimeSeconds": 3600,
+                        "timezone": "Europe/Berlin",
+                    }
+                }
+            }
+        })
+
+        self.assertIn("CPU_USAGE_PERCENT=22.5", same_report["cpu_usage"])
+        self.assertIn("Mem:", same_report["memory"])
+        self.assertEqual(same_report["uptime"], "3600")
+        self.assertEqual(same_report["timezone"], "Europe/Berlin")
+
+    def test_container_security_rows_are_not_invented_when_missing(self):
+        same_report = bridge._same_report_evidence({
+            "fallback": {"evidence": {"security": {"items": []}}}
+        })
+        self.assertEqual(same_report["docker_security"], "")
+
+    def test_container_security_rows_render_inspected_settings(self):
+        same_report = bridge._same_report_evidence({
+            "fallback": {
+                "evidence": {
+                    "security": {
+                        "items": [{
+                            "name": "socket-reader",
+                            "privileged": False,
+                            "dockerSocket": True,
+                            "hostPid": False,
+                            "hostNetwork": True,
+                        }]
+                    }
+                }
+            }
+        })
+        self.assertIn("socket-reader", same_report["docker_security"])
+        self.assertIn("DockerSock=/var/run/docker.sock", same_report["docker_security"])
+        self.assertIn("NetworkMode=host", same_report["docker_security"])
+
+    def test_container_layer_marks_missing_inspection_not_verified(self):
+        result = containers_layer.answer(
+            {"same_report_evidence": {"docker_security": ""}},
+            "Which containers have elevated privileges or Docker socket access?",
+        )
+        self.assertEqual(result["trust_state"], "NOT VERIFIED")
+        self.assertIn("evidence absence", "\n".join(result["lines"]))
 
 
 if __name__ == "__main__":

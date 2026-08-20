@@ -1,6 +1,7 @@
 import {
   dashboardEvidence,
   dockerContainers,
+  dockerSecuritySummary,
   networkInterfaces,
   networkOpenPorts,
   smartHealth,
@@ -10,6 +11,7 @@ import {
   zimaFailedServices,
   zimaFirewallStatus,
   zimaSecurityScan,
+  systemInfo,
 } from "./evidence.js";
 import { backupStatus, dockerHealth, dockerStats, zimaApps, zimaAppVerify } from "./roadmap.js";
 import { readAudit } from "./audit.js";
@@ -18,8 +20,10 @@ function normalise(question) {
   return String(question ?? "").trim().replace(/\s+/g, " ");
 }
 
-function classify(question) {
+export function classify(question) {
   const q = question.toLowerCase();
+  if (/(privileged|docker[ -]?socket|host[ -]?pid|elevated privileges|added capabilities|container.*security)/.test(q)) return "container_security";
+  if (/(cpu usage|memory usage|ram usage|uptime|system timezone|load average|swap usage)/.test(q)) return "system_metrics";
   if (/what (service|process|container).*(using|use).*disk|disk (io|i\/o|activity|usage).*(service|process|container)/.test(q)) return "disk_io_service";
   if (/how many.*disk|disk.*how many/.test(q)) return "disk_inventory";
   if (/(disk|drive|smart|nvme).*(health|healthy|failing|failure)|are my (disk|drive)/.test(q)) return "disk_health";
@@ -30,6 +34,70 @@ function classify(question) {
   if (/how many.*app|app.*how many/.test(q)) return "app_inventory";
   if (/homarr|app.*attention|verify.*app/.test(q)) return "app_verify";
   return "custom_question";
+}
+
+function formatBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes)) return "not captured";
+  if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(2)} GiB`;
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(1)} MiB`;
+  return `${bytes} B`;
+}
+
+function requestedSystemMetrics(question) {
+  const q = question.toLowerCase();
+  const requested = [];
+  if (/cpu usage/.test(q)) requested.push("cpuUsage");
+  if (/(memory|ram) usage/.test(q)) requested.push("memory");
+  if (/uptime/.test(q)) requested.push("uptime");
+  if (/timezone/.test(q)) requested.push("timezone");
+  if (/load average/.test(q)) requested.push("loadAverage");
+  if (/swap usage/.test(q)) requested.push("swap");
+  return requested.length ? requested : ["cpuUsage", "memory", "uptime", "timezone"];
+}
+
+function formatUptime(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value < 0) return "not captured";
+  const days = Math.floor(value / 86400);
+  const hours = Math.floor((value % 86400) / 3600);
+  const minutes = Math.floor((value % 3600) / 60);
+  return `${days}d ${hours}h ${minutes}m`;
+}
+
+export function buildSystemMetricsResult(question, system = {}) {
+  const requested = requestedSystemMetrics(question);
+  const coverage = {
+    ...(system.coverage ?? {}),
+    swap: Number.isFinite(Number(system.swapTotalBytes)) && Number.isFinite(Number(system.swapUsedBytes)),
+  };
+  const missing = requested.filter((field) => coverage[field] !== true);
+  const lines = [];
+  if (requested.includes("cpuUsage")) lines.push(`CPU usage: ${Number.isFinite(system.cpuUsagePercent) ? `${system.cpuUsagePercent}%` : "not captured"}`);
+  if (requested.includes("memory")) lines.push(`Memory usage: ${Number.isFinite(system.memoryUsagePercent) ? `${system.memoryUsagePercent}% (${formatBytes(system.usedMemoryBytes)} of ${formatBytes(system.totalMemoryBytes)})` : "not captured"}`);
+  if (requested.includes("uptime")) lines.push(`Uptime: ${formatUptime(system.uptimeSeconds)}`);
+  if (requested.includes("timezone")) lines.push(`System timezone: ${system.timezone || "not captured"}`);
+  if (requested.includes("loadAverage")) lines.push(`Load average: ${system.loadAverage?.join(" / ") || "not captured"}`);
+  if (requested.includes("swap")) lines.push(`Swap usage: ${formatBytes(system.swapUsedBytes)} of ${formatBytes(system.swapTotalBytes)}`);
+  return result("system_metrics", missing.length ? "PARTIALLY VERIFIED" : "VERIFIED",
+    `${lines.join(". ")}.${missing.length ? ` Missing requested evidence: ${missing.join(", ")}.` : ""}`,
+    ["system_info"], { system, requested, missing, coverage });
+}
+
+export function buildContainerSecurityResult(security = {}) {
+  const flagged = [...new Set([
+    ...(security.privileged ?? []),
+    ...(security.dockerSocket ?? []),
+    ...(security.hostPid ?? []),
+    ...(security.hostNetwork ?? []),
+    ...(security.addedCapabilities ?? []),
+  ])].sort();
+  const complete = security.complete === true;
+  const summary = complete
+    ? `${security.inspectedContainers} of ${security.observedContainers} observed container(s) were inspected. ${flagged.length ? `${flagged.length} container(s) have elevated settings: ${flagged.join(", ")}.` : "No elevated privilege, Docker-socket, host-PID or host-network setting was observed."}`
+    : `Container security inspection is incomplete: ${security.inspectedContainers ?? 0} of ${security.observedContainers ?? 0} observed container(s) were inspected; ${security.failedInspections ?? 0} inspection(s) failed. No zero-risk conclusion is made.`;
+  return result("container_security", complete ? "PARTIALLY VERIFIED" : "NOT VERIFIED", summary,
+    ["docker_ps", "docker_inspect"], { security });
 }
 
 function result(intent, verification, answer, sources, evidence = {}) {
@@ -260,7 +328,13 @@ async function answerQuestionFallback(rawQuestion) {
   const intent = classify(question);
 
   let response;
-  if (intent === "disk_io_service") {
+  if (intent === "system_metrics") {
+    const system = await systemInfo();
+    response = buildSystemMetricsResult(question, system);
+  } else if (intent === "container_security") {
+    const security = await dockerSecuritySummary();
+    response = buildContainerSecurityResult(security);
+  } else if (intent === "disk_io_service") {
     const first = await dockerStats();
     await new Promise(resolve => setTimeout(resolve, 1200));
     const second = await dockerStats();
@@ -440,7 +514,7 @@ function cleanBrainAnswer(value) {
 
 async function fullBrainAnswer(question, fallback) {
   const evidence = { fallback };
-  if (["containers_not_running", "comprehensive_health", "custom_question"].includes(fallback.intent)) {
+  if (["containers_not_running", "comprehensive_health", "container_security", "custom_question"].includes(fallback.intent)) {
     evidence.containers = await dockerContainers();
   }
   const response = await fetch(FULL_BRAIN_URL + "/answer", {

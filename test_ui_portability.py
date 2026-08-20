@@ -15,4 +15,5 @@ class UiPortabilityTests(unittest.TestCase):
         self.assertNotIn('class="avatar">GH', index)
         self.assertIn("data.system?.hostname", app)
         self.assertIn("data.system?.timezone", app)
+        self.assertIn("Host ${hostZone} · Viewer ${viewerZone}", app)
         self.assertIn('${TZ:-UTC}', compose)

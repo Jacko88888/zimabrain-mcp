@@ -207,3 +207,28 @@ volumes:
       type: tmpfs
       device: tmpfs
       o: uid=0,gid=1000,mode=2770,size=16m
+
+x-casaos:
+  id: com.gelbuilding.zimabrain-mcp
+  main: ui
+  index: /
+  port_map: "8621"
+  scheme: http
+  icon: ./icon.svg
+  title:
+    en_US: ZimaBrain MCP
+  tagline:
+    en_US: Verifier-first ZimaBrain reasoning with live read-only MCP evidence.
+  description:
+    en_US: ZimaBrain MCP combines the full ZimaBrain reasoning engine with bounded read-only evidence collectors for Docker, storage, networking and ZimaOS health.
+  author: George Hadjistavrou
+  developer: ZimaBrain Community Project
+  category: AI
+  architectures:
+    - amd64
+  version: "1.0.8"
+  update_at: "2026-08-20"
+  website: https://github.com/Jacko88888/zimabrain-mcp
+  repo: https://github.com/Jacko88888/zimabrain-mcp
+  support: https://github.com/Jacko88888/zimabrain-mcp/issues
+  docs: https://github.com/Jacko88888/zimabrain-mcp/blob/main/README.md

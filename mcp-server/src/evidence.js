@@ -120,7 +120,7 @@ export const zimaJournalErrors = () => networkCollectorGet("journal-errors");
 export const zimaBootDiagnostics = () => networkCollectorGet("boot-errors");
 export const zimaRaucStatus = () => networkCollectorGet("rauc");
 
-async function dockerSecuritySummary() {
+export async function dockerSecuritySummary() {
   const containers = await dockerGet("/containers/json?all=1&size=0");
   const limited = containers.slice(0, 150);
   const inspections = [];
@@ -136,25 +136,41 @@ async function dockerSecuritySummary() {
           privileged: Boolean(host.Privileged),
           hostNetwork: host.NetworkMode === "host",
           hostPid: host.PidMode === "host",
-          dockerSocket: mounts.some((mount) => mount.Destination === "/var/run/docker.sock"),
+          dockerSocket: mounts.some((mount) =>
+            [mount.Source, mount.Destination].some((value) =>
+              ["/var/run/docker.sock", "/run/docker.sock"].includes(value)
+            )
+          ),
           readonlyRootfs: Boolean(host.ReadonlyRootfs),
+          capAdd: Array.isArray(host.CapAdd) ? host.CapAdd : [],
         };
-      } catch {
-        return null;
+      } catch (error) {
+        return {
+          inspectionError: true,
+          id: String(container.Id ?? "").slice(0, 12),
+          name: String(container.Names?.[0] ?? "unknown").replace(/^\//, ""),
+          error: String(error?.message ?? error).slice(0, 200),
+        };
       }
     })));
   }
-  const observed = inspections.filter(Boolean);
+  const observed = inspections.filter((item) => item && item.inspectionError !== true);
+  const failures = inspections.filter((item) => item?.inspectionError === true);
   const named = (key) => observed.filter((item) => item[key]).map((item) => item.name).sort();
   return {
     observedContainers: containers.length,
     inspectedContainers: observed.length,
+    failedInspections: failures.length,
+    complete: containers.length <= 150 && failures.length === 0 && observed.length === containers.length,
     inspectionBound: 150,
     privileged: named("privileged"),
     hostNetwork: named("hostNetwork"),
     hostPid: named("hostPid"),
     dockerSocket: named("dockerSocket"),
+    addedCapabilities: observed.filter((item) => item.capAdd.length > 0).map((item) => item.name).sort(),
     readonlyRootfsCount: observed.filter((item) => item.readonlyRootfs).length,
+    items: observed,
+    failures,
   };
 }
 
@@ -220,14 +236,24 @@ function safeContainerReference(container) {
   return encodeURIComponent(container);
 }
 
+function cpuTimes(text) {
+  const values = String(text).split("\n")[0]?.trim().split(/\s+/).slice(1).map(Number) ?? [];
+  const idle = (values[3] ?? 0) + (values[4] ?? 0);
+  return { idle, total: values.reduce((sum, value) => sum + (Number.isFinite(value) ? value : 0), 0) };
+}
+
 export async function systemInfo() {
-  const [osText, uptimeText, memText, cpuText, hostnameText] = await Promise.all([
+  const [osText, uptimeText, memText, cpuText, hostnameText, loadText, statBefore] = await Promise.all([
     readText("/etc/os-release"),
     readText("/proc/uptime"),
     readText("/proc/meminfo"),
     readText("/proc/cpuinfo"),
     readText("/etc/hostname").catch(() => "unknown"),
+    readText("/proc/loadavg"),
+    readText("/proc/stat"),
   ]);
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const statAfter = await readText("/proc/stat");
   const os = parseKeyValue(osText);
   const mem = parseKeyValue(memText, ":");
   const cpuModels = cpuText
@@ -237,17 +263,43 @@ export async function systemInfo() {
   const cpuCount = cpuText.split("\n").filter((line) => /^processor\s*:/.test(line)).length;
   const totalMemoryBytes = Number.parseInt(mem.MemTotal ?? "0", 10) * 1024;
   const availableMemoryBytes = Number.parseInt(mem.MemAvailable ?? "0", 10) * 1024;
+  const swapTotalBytes = Number.parseInt(mem.SwapTotal ?? "0", 10) * 1024;
+  const swapFreeBytes = Number.parseInt(mem.SwapFree ?? "0", 10) * 1024;
+  const before = cpuTimes(statBefore);
+  const after = cpuTimes(statAfter);
+  const totalDelta = after.total - before.total;
+  const idleDelta = after.idle - before.idle;
+  const cpuUsagePercent = totalDelta > 0
+    ? Number((((totalDelta - idleDelta) / totalDelta) * 100).toFixed(1))
+    : null;
+  const loadAverage = loadText.trim().split(/\s+/).slice(0, 3).map(Number);
+  const timezone = process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
   return {
     hostname: hostnameText.trim(),
-    timezone: process.env.TZ || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    timezone,
     os: os.PRETTY_NAME ?? os.NAME ?? "Unknown",
     osVersion: os.VERSION_ID ?? null,
     uptimeSeconds: Math.floor(Number.parseFloat(uptimeText.split(/\s+/)[0] ?? "0")),
     cpuCount,
     cpuModel: cpuModels[0] ?? "Unknown",
+    cpuUsagePercent,
+    loadAverage,
     totalMemoryBytes,
     availableMemoryBytes,
+    usedMemoryBytes: Math.max(0, totalMemoryBytes - availableMemoryBytes),
+    memoryUsagePercent: totalMemoryBytes > 0
+      ? Number((((totalMemoryBytes - availableMemoryBytes) / totalMemoryBytes) * 100).toFixed(1))
+      : null,
+    swapTotalBytes,
+    swapUsedBytes: Math.max(0, swapTotalBytes - swapFreeBytes),
+    coverage: {
+      cpuUsage: Number.isFinite(cpuUsagePercent),
+      memory: totalMemoryBytes > 0 && availableMemoryBytes > 0,
+      uptime: Number.isFinite(Number.parseFloat(uptimeText)) && Number.parseFloat(uptimeText) >= 0,
+      timezone: Boolean(timezone),
+      loadAverage: loadAverage.length === 3 && loadAverage.every(Number.isFinite),
+    },
   };
 }
 

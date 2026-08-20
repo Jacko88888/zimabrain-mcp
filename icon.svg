@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">ZimaBrain MCP</title>
+  <desc id="desc">A mint Z on a deep green rounded square.</desc>
+  <rect width="512" height="512" rx="112" fill="#10281f"/>
+  <rect x="18" y="18" width="476" height="476" rx="96" fill="none" stroke="#83e6b5" stroke-width="12"/>
+  <path d="M142 142h228v56L230 314h140v56H142v-56l140-116H142z" fill="#8ee7b8"/>
+</svg>

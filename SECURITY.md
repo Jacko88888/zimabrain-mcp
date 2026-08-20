@@ -2,7 +2,7 @@
 
 ## Supported security model
 
-ZimaBrain MCP v1.0.7 is a viewer-only, verifier-first release.
+ZimaBrain MCP v1.0.8 is a viewer-only, verifier-first release candidate.
 
 - No automatic host mutations
 - No direct writable Docker socket

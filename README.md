@@ -13,7 +13,7 @@ ZimaBrain MCP combines the full ZimaBrain diagnostic engine with bounded live ev
 - MCP tools: **34 read-only capabilities**
 - Services: **6 local services**; optional Secure MCP Tunnel is separate
 - Full Brain source commit: `d1add8738146a04b42e7285965f6811467b88e47`
-- MCP integration patchsets: `mcp-structured-network-evidence-v1` and `mcp-structured-comprehensive-health-v1` (recorded with updated hashes in the source manifest)
+- MCP integration patchsets: `mcp-structured-network-evidence-v1`, `mcp-structured-comprehensive-health-v1` and `mcp-evidence-completeness-v1` (recorded with updated hashes in the source manifest)
 
 ## Architecture
 
@@ -47,6 +47,8 @@ The release-candidate answer matrix covers:
 6. Application verification, including Homarr
 7. Running and stopped containers
 8. Live container block I/O
+9. Current CPU usage, memory usage, uptime, load and host timezone
+10. Privileged mode, Docker-socket access, host namespaces and added container capabilities
 
 The verifier rule is simple:
 
@@ -102,6 +104,10 @@ cp .env.example .env
 
 The portable release definition is [compose.portable.yaml](compose.portable.yaml). The installer creates `compose.detected-devices.yaml` locally from the target host's actual SATA and NVMe devices; that generated file is not committed.
 
+The installer detects the host timezone from an explicit `ZIMABRAIN_TZ` override, the existing `TZ` environment, `timedatectl`, `/etc/timezone`, or `/etc/localtime`, in that order. The interface shows the verified host timezone and, when different, labels the browser's viewer timezone separately. This prevents a browser location from being presented as the server timezone.
+
+The Compose source now contains the official top-level `x-casaos` identity and entry metadata for one ZimaBrain MCP application. A terminal `docker compose` installation is still external to ZimaOS app management, so ZimaOS may list its containers under Legacy apps. Registering it as one dashboard tile requires a separately validated ZimaOS Custom App/App Store installation path; the installer does not call an unverified app-management API.
+
 `compose.zb2-v0.10.yaml` is retained as the original ZimaBoard2 development topology and is not the portable installer target.
 
 ## Validation performed
@@ -116,7 +122,7 @@ The v1.0.8 release candidate retains the v1.0.7 validation suite and adds portab
 - Cross-source network answers using listeners, ZFW state, Docker ports, application mounts, interfaces and the bounded security scan
 - Comprehensive-attention regression tests preventing uncollected media paths or clear systemd evidence from becoming findings
 - Partial-verification enforcement when SMART, NVMe, LAN-probe or internet-reachability evidence is incomplete
-- **37 Node tests and 19 Python/security tests passed** for the current candidate source
+- **40 Node tests and 14 dependency-free Python/security tests passed** for the current candidate source
 - Docker, storage, network and ZimaOS tool self-checks
 - UI JavaScript syntax verification
 - Download-handler verification

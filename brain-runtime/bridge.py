@@ -116,6 +116,52 @@ def _failed_units_from(value):
     return ""
 
 
+def _system_legacy_fields(value):
+    system = value if isinstance(value, dict) else {}
+    total = int(system.get("totalMemoryBytes") or 0) // (1024 * 1024)
+    available = int(system.get("availableMemoryBytes") or 0) // (1024 * 1024)
+    used = int(system.get("usedMemoryBytes") or 0) // (1024 * 1024)
+    swap_total = int(system.get("swapTotalBytes") or 0) // (1024 * 1024)
+    swap_used = int(system.get("swapUsedBytes") or 0) // (1024 * 1024)
+    cpu_usage = system.get("cpuUsagePercent")
+    load = system.get("loadAverage") if isinstance(system.get("loadAverage"), list) else []
+    cpu_info = "\n".join([
+        f"Model name: {system.get('cpuModel') or 'Not captured'}",
+        f"CPU(s): {system.get('cpuCount') or 'Not captured'}",
+    ])
+    memory = "\n".join([
+        "              total        used        free      shared  buff/cache   available",
+        f"Mem:          {total}        {used}           0           0           0        {available}",
+        f"Swap:         {swap_total}        {swap_used}           0",
+    ]) if total else ""
+    return {
+        "cpu_info": cpu_info,
+        "cpu_usage": f"CPU_USAGE_PERCENT={cpu_usage}" if cpu_usage is not None else "",
+        "memory": memory,
+        "loadavg": " ".join(str(item) for item in load[:3]),
+        "uptime": str(system.get("uptimeSeconds") or ""),
+        "host_os": _bounded_json(system, 12000) if system else "",
+        "kernel": "",
+        "timezone": str(system.get("timezone") or ""),
+    }
+
+
+def _docker_security_rows(value):
+    security = value if isinstance(value, dict) else {}
+    rows = []
+    for item in security.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        rows.append("|".join([
+            str(item.get("name") or "unknown"),
+            f"Privileged={str(bool(item.get('privileged'))).lower()}",
+            f"DockerSock={'/var/run/docker.sock' if item.get('dockerSocket') else ''}",
+            f"PidMode={'host' if item.get('hostPid') else ''}",
+            f"NetworkMode={'host' if item.get('hostNetwork') else ''}",
+            f"CapAdd={json.dumps(item.get('capAdd') or [])}",
+        ]))
+    return "\n".join(rows)
+
 def _legacy_report(payload):
     fallback = payload.get("fallback") if isinstance(payload, dict) else {}
     evidence = fallback.get("evidence") if isinstance(fallback, dict) else {}
@@ -203,6 +249,8 @@ def _same_report_evidence(payload):
     failed_units = _failed_units_from(
         evidence.get("failedServices") or evidence.get("failed_units") or ""
     )
+    system_fields = _system_legacy_fields(evidence.get("system"))
+    security = evidence.get("security") if isinstance(evidence.get("security"), dict) else {}
     return {
         "boot_id": "",
         "failed_units": failed_units,
@@ -220,7 +268,7 @@ def _same_report_evidence(payload):
         "docker_ps": "\n".join(docker_ps),
         "docker_states": "\n".join(docker_states),
         "docker_access": compact,
-        "docker_security": str(evidence.get("scan") or evidence.get("security") or ""),
+        "docker_security": _docker_security_rows(security) or str(evidence.get("scan") or ""),
         "nvidia": "",
         "smart": str(evidence.get("smart") or "\n".join(disk_lines)),
         "nvme_smart": str(evidence.get("nvme") or "\n".join(disk_lines)),
@@ -242,13 +290,14 @@ def _same_report_evidence(payload):
         "ip_addr": str(evidence.get("interfaces") or ""),
         "ip_route": str(evidence.get("routes") or ""),
         "resolv": str(evidence.get("dns") or ""),
-        "host_os": str(evidence.get("system") or ""),
-        "kernel": str(evidence.get("system") or ""),
-        "uptime": str(evidence.get("system") or ""),
-        "cpu_info": str(evidence.get("system") or ""),
-        "cpu_usage": str(evidence.get("system") or ""),
-        "memory": str(evidence.get("system") or ""),
-        "loadavg": str(evidence.get("system") or ""),
+        "host_os": system_fields["host_os"],
+        "kernel": system_fields["kernel"],
+        "uptime": system_fields["uptime"],
+        "cpu_info": system_fields["cpu_info"],
+        "cpu_usage": system_fields["cpu_usage"],
+        "memory": system_fields["memory"],
+        "loadavg": system_fields["loadavg"],
+        "timezone": system_fields["timezone"],
         "thermal_zones": str(evidence.get("sensors") or ""),
         "sensors": str(evidence.get("sensors") or ""),
         "rauc": str(evidence.get("rauc") or ""),

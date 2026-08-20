@@ -39,6 +39,22 @@ def answer(bundle, question=""):
             evidence.get("docker_security", "")
         )
 
+        if not rows:
+            return {
+                "lines": [
+                    "- Docker container inspection evidence was not captured.",
+                    "- Zero inspected containers is evidence absence, not evidence that no elevated settings exist.",
+                ],
+                "trust_state": "NOT VERIFIED",
+                "trust_title": "❌ NOT VERIFIED — DOCKER INSPECTION EVIDENCE UNAVAILABLE",
+                "trust_detail": (
+                    "No container configuration rows were available, so privileged mode, "
+                    "Docker-socket access, host PID access and added capabilities cannot be classified."
+                ),
+                "next_step": "Collect current bounded Docker inspect evidence before making a container-security claim.",
+                "forum_summary": "Container security could not be verified because no Docker inspection rows were captured.",
+            }
+
         privileged = [
             row for row in rows
             if row.get("Privileged", "").lower() == "true"
@@ -51,6 +67,10 @@ def answer(bundle, question=""):
             row for row in rows
             if row.get("PidMode", "").lower() == "host"
         ]
+        host_network = [
+            row for row in rows
+            if row.get("NetworkMode", "").lower() == "host"
+        ]
         capabilities = [
             row for row in rows
             if row.get("CapAdd", "") not in ("", "[]", "<nil>")
@@ -62,6 +82,7 @@ def answer(bundle, question=""):
                 privileged,
                 docker_socket,
                 host_pid,
+                host_network,
                 capabilities,
             )
             for row in group
@@ -81,6 +102,7 @@ def answer(bundle, question=""):
             f"- Privileged containers: {len(privileged)}",
             f"- Docker-socket containers: {len(docker_socket)}",
             f"- Host-PID containers: {len(host_pid)}",
+            f"- Host-network containers: {len(host_network)}",
             (
                 "- Containers with added capabilities: "
                 f"{len(capabilities)}"
@@ -104,6 +126,8 @@ def answer(bundle, question=""):
                     flags.append("Docker socket")
                 if row in host_pid:
                     flags.append("host PID namespace")
+                if row in host_network:
+                    flags.append("host network namespace")
                 if row in capabilities:
                     flags.append(
                         f"added capabilities {row.get('CapAdd')}"

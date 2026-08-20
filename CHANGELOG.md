@@ -18,6 +18,10 @@
 - Marks comprehensive answers partially verified whenever required SMART/NVMe or network-reachability evidence remains unverified.
 - Supports both branch names and exact 40-character commit SHAs in the portable installer archive URL.
 - Detects the target host timezone for Compose and the UI, removes the Sydney default and replaces the developer-specific `GH` avatar with a neutral local-viewer symbol.
+- Separates verified host timezone from the browser viewer timezone and supports explicit IANA timezone overrides.
+- Routes CPU, memory, uptime, load and timezone questions through live host evidence; missing requested fields now force PARTIALLY VERIFIED.
+- Inspects bounded Docker configuration evidence for privileged mode, Docker-socket access, host PID/network namespaces and added capabilities; zero successful inspections now force NOT VERIFIED.
+- Adds official top-level `x-casaos` identity metadata while documenting that direct Docker Compose installs remain external Legacy apps until a validated Custom App installation path is used.
 
 ## v1.0.7 - 2026-08-18
 

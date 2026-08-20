@@ -26,6 +26,10 @@ After installation, open:
 http://ZIMAOS-IP:8621
 ```
 
+The installer reports the detected host timezone. To test with an explicit IANA timezone when the host itself is configured as UTC, prefix the installer with `ZIMABRAIN_TZ=Europe/Berlin` (or the tester's correct zone). The UI labels host and viewer timezones separately if they differ.
+
+Because this tester installer uses Docker Compose directly in order to detect and safely map each host's storage devices, ZimaOS can show the six containers under Legacy apps. They are one Compose project, but they are not yet registered as one ZimaOS dashboard application. The source includes `x-casaos` metadata for the forthcoming validated Custom App package.
+
 ## What the installer verifies
 
 - It is running as `root`.

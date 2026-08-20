@@ -21,6 +21,14 @@
         "brain/router.py",
         "brain/layers/comprehensive_health.py"
       ]
+    },
+    {
+      "id": "mcp-evidence-completeness-v1",
+      "reason": "Treat missing requested host metrics and incomplete Docker inspection as evidence gaps instead of verified zero-value findings.",
+      "files": [
+        "brain/layers/containers.py",
+        "brain/layers/host_hardware_metrics.py"
+      ]
     }
   ],
   "fileCount": 67,
@@ -112,8 +120,8 @@
     },
     {
       "path": "brain/layers/containers.py",
-      "sha256": "4162a26a503cd8815fcf630f7838a66b6daa153c3aabaddb457ed0cfa7aacae5",
-      "size": 7983
+      "sha256": "5d843d42c7e7c977177ee835f97beaee829e4b5b6a444fa4be0f19c693ea9b5b",
+      "size": 9241
     },
     {
       "path": "brain/layers/custom_question.py",
@@ -182,8 +190,8 @@
     },
     {
       "path": "brain/layers/host_hardware_metrics.py",
-      "sha256": "cb977c3b1058da61430bc79d00902b9a55587eb3a3da5c2e3e5399c52b1fb760",
-      "size": 8737
+      "sha256": "eea89a21ad76e2f6778644f9c47b53244c780f89f1dfbda5e870aeab5655d21d",
+      "size": 9904
     },
     {
       "path": "brain/layers/install_boot_diag.py",
