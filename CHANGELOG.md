@@ -22,6 +22,9 @@
 - Routes CPU, memory, uptime, load and timezone questions through live host evidence; missing requested fields now force PARTIALLY VERIFIED.
 - Inspects bounded Docker configuration evidence for privileged mode, Docker-socket access, host PID/network namespaces and added capabilities; zero successful inspections now force NOT VERIFIED.
 - Adds official top-level `x-casaos` identity metadata while documenting that direct Docker Compose installs remain external Legacy apps until a validated Custom App installation path is used.
+- Includes live host metrics in comprehensive health answers instead of reporting available CPU, memory, load, uptime and timezone evidence as missing.
+- Separates current-report security posture from the stored drift snapshot so privileged and Docker-socket counts cannot contradict the live evidence.
+- Removes duplicate punctuation and misleading signal counts from the concise comprehensive-health conclusion.
 
 ## v1.0.7 - 2026-08-18
 

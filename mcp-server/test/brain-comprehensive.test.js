@@ -6,6 +6,15 @@ import { buildComprehensiveHealthResult } from "../src/brain.js";
 
 test("comprehensive health remains partial when reachability and NVMe health are unverified", () => {
   const result = buildComprehensiveHealthResult({
+    system: {
+      cpuUsagePercent: 12.5,
+      totalMemoryBytes: 8 * 1024 ** 3,
+      usedMemoryBytes: 2 * 1024 ** 3,
+      availableMemoryBytes: 6 * 1024 ** 3,
+      uptimeSeconds: 3600,
+      timezone: "Europe/Berlin",
+      loadAverage: [0.1, 0.2, 0.3],
+    },
     health: {
       items: [{ name: "app", state: "running", health: "healthy" }],
     },
@@ -40,6 +49,10 @@ test("comprehensive health remains partial when reachability and NVMe health are
   assert.match(result.answer, /saved rules but is not applied/i);
   assert.equal(result.evidence.failedServices.state, "clear");
   assert.equal(result.evidence.coverage.lanConnectionProbePerformed, false);
+  assert.equal(result.evidence.system.timezone, "Europe/Berlin");
+  assert.ok(result.sources.includes("system_info"));
+  assert.doesNotMatch(result.answer, /signal\(s\)/i);
+  assert.doesNotMatch(result.answer, /\.\./);
 });
 
 

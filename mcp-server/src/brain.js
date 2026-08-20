@@ -224,6 +224,7 @@ export function buildNetworkExposureResult({ scan = {}, ports = {}, firewall = {
 }
 
 export function buildComprehensiveHealthResult({
+  system = {},
   health = {},
   failed = {},
   dashboard = {},
@@ -264,7 +265,7 @@ export function buildComprehensiveHealthResult({
     ...nvmeAttention.map((item) => `${item.device ?? "NVMe device"} status is ${item.status}`),
     ...(raid.status === "attention" ? ["RAID or multi-device storage requires attention"] : []),
     ...securityAttention.map((item) => item.message),
-  ].filter(Boolean))];
+  ].filter(Boolean).map((message) => String(message).trim().replace(/[.;]+$/, "")))];
 
   const smartUnknown = (smart.devices ?? []).some((item) => !item.status || item.status === "unknown");
   const nvmeUnverified = (nvme.devices ?? []).some((item) => item.healthVerified !== true);
@@ -278,12 +279,13 @@ export function buildComprehensiveHealthResult({
     "comprehensive_health",
     complete ? "VERIFIED" : "PARTIALLY VERIFIED",
     messages.length
-      ? `${messages.length} evidence-backed attention signal(s) were observed: ${messages.join("; ")}.`
+      ? `Current evidence requires attention: ${messages.join("; ")}.`
       : "No current attention signal was observed in the collected domains. Some domains remain unverified, so this is not a guarantee that the whole system is healthy.",
     [
       "docker_health",
       "zima_failed_services",
       "dashboard_evidence",
+      "system_info",
       "docker_ps",
       "storage_inventory",
       "smart_health",
@@ -295,6 +297,7 @@ export function buildComprehensiveHealthResult({
       "zima_security_scan",
     ],
     {
+      system,
       health,
       failedServices: failed,
       dashboard,
@@ -392,7 +395,8 @@ async function answerQuestionFallback(rawQuestion) {
       ["docker_ps"],
       { observedContainers: containers.length, stopped });
   } else if (intent === "comprehensive_health") {
-    const [health, failed, dashboard, containers, storage, smart, nvme, raid, firewall, ports, interfaces, scan] = await Promise.all([
+    const [system, health, failed, dashboard, containers, storage, smart, nvme, raid, firewall, ports, interfaces, scan] = await Promise.all([
+      systemInfo(),
       dockerHealth(),
       zimaFailedServices(),
       dashboardEvidence(),
@@ -407,7 +411,7 @@ async function answerQuestionFallback(rawQuestion) {
       zimaSecurityScan(),
     ]);
     response = buildComprehensiveHealthResult({
-      health, failed, dashboard, containers, storage, smart, nvme, raid,
+      system, health, failed, dashboard, containers, storage, smart, nvme, raid,
       firewall, ports, interfaces, scan,
     });
   } else if (intent === "backup_status") {

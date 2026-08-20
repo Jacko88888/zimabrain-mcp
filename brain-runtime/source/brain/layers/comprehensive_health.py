@@ -486,12 +486,21 @@ def answer(bundle, question=""):
     lines.append("")
 
     lines.append("#### Configuration drift and update correlation")
+    lines.append(
+        "- Current report posture: "
+        f"{len(missing_paths)} missing fixed path(s); "
+        f"{len(readonly_mounts)} unexpectedly read-only storage mount(s); "
+        f"{ports.get('lan_open', 0)} connection-probed LAN-open port(s); "
+        f"{privileged_count} privileged container(s); "
+        f"{docker_socket_count} Docker-socket container(s)."
+    )
     if current_drift:
         lines.append(
-            "- Current posture: "
+            "- Latest stored drift snapshot: "
             f"{current_drift.get('paths_missing', 0)} missing path(s); "
             f"{current_drift.get('mounts_missing', 0)} missing mount(s); "
-            f"{current_drift.get('lan_open_ports', 0)} LAN-open port(s); "
+            f"{current_drift.get('lan_open_ports', 0)} connection-probed "
+            "LAN-open port(s); "
             f"{current_drift.get('privileged_containers', 0)} privileged "
             "container(s); "
             f"{current_drift.get('docker_socket_containers', 0)} Docker-socket "

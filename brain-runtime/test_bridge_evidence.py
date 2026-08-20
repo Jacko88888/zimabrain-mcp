@@ -1,3 +1,4 @@
+import json
 import pathlib
 import sys
 import unittest
@@ -9,6 +10,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(SOURCE))
 
 import bridge  # noqa: E402
+from brain.layers import comprehensive_health  # noqa: E402
 from brain.layers import containers as containers_layer  # noqa: E402
 
 
@@ -117,6 +119,43 @@ class StructuredEvidenceBridgeTests(unittest.TestCase):
         self.assertNotIn("ZimaOS media mirror path missing", result["answer"])
         self.assertNotIn("Failed systemd unit detected", result["answer"])
         self.assertIn("Comprehensive System Health Layer", result["answer"])
+
+    def test_comprehensive_posture_separates_live_and_stored_security_counts(self):
+        bundle = {
+            "same_report_evidence": {
+                "docker_states": "app|image|running|healthy|0",
+                "docker_security": (
+                    "app|Privileged=true|DockerSock=/var/run/docker.sock"
+                ),
+                "structured_mcp_evidence": json.dumps({
+                    "system": {
+                        "cpuModel": "Example CPU",
+                        "cpuUsagePercent": 10,
+                        "totalMemoryBytes": 8 * 1024 * 1024 * 1024,
+                        "availableMemoryBytes": 6 * 1024 * 1024 * 1024,
+                        "usedMemoryBytes": 2 * 1024 * 1024 * 1024,
+                        "swapTotalBytes": 0,
+                        "swapUsedBytes": 0,
+                        "loadAverage": [0.1, 0.2, 0.3],
+                        "uptimeSeconds": 3600,
+                        "timezone": "Europe/Berlin",
+                    },
+                    "scan": {
+                        "dockerSecurity": {
+                            "privileged": ["app"],
+                            "dockerSocket": ["app"],
+                        }
+                    },
+                }),
+            }
+        }
+
+        result = comprehensive_health.answer(bundle, "What needs attention?")
+        text = "\n".join(result["lines"])
+        self.assertIn("Current report posture:", text)
+        self.assertIn("1 privileged container(s)", text)
+        self.assertIn("1 Docker-socket container(s)", text)
+        self.assertIn("CPU usage snapshot: 10.0%", text)
 
     def test_system_metrics_are_rendered_for_host_layer(self):
         same_report = bridge._same_report_evidence({
